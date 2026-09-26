@@ -1,0 +1,66 @@
+"""running-plan-engine — deterministic training-plan contracts."""
+
+from plan_engine.models import (
+    VALIDATOR_RULE_IDS,
+    Athlete,
+    AthleteConstraints,
+    Benchmark,
+    DayAvailability,
+    EngineError,
+    ErrorCode,
+    Goal,
+    Level,
+    Options,
+    PaceZoneDetail,
+    PaceZones,
+    Plan,
+    PlanMeta,
+    PlanPhase,
+    PlanRequest,
+    PlanResult,
+    Session,
+    SessionKind,
+    StructureBlock,
+    WeekPlan,
+    Weekday,
+)
+from plan_engine.planner import generate_plan
+from plan_engine.paces import (
+    compute_paces,
+    compute_paces_from_benchmark,
+    pace_zones_from_vdot,
+    vdot_from_benchmark,
+)
+
+__version__ = "0.1.0"
+
+__all__ = [
+    "VALIDATOR_RULE_IDS",
+    "Athlete",
+    "AthleteConstraints",
+    "Benchmark",
+    "DayAvailability",
+    "EngineError",
+    "ErrorCode",
+    "Goal",
+    "Level",
+    "Options",
+    "PaceZoneDetail",
+    "PaceZones",
+    "Plan",
+    "PlanMeta",
+    "PlanPhase",
+    "PlanRequest",
+    "PlanResult",
+    "Session",
+    "SessionKind",
+    "StructureBlock",
+    "WeekPlan",
+    "Weekday",
+    "generate_plan",
+    "compute_paces",
+    "compute_paces_from_benchmark",
+    "pace_zones_from_vdot",
+    "vdot_from_benchmark",
+    "__version__",
+]

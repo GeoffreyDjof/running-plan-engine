@@ -1,0 +1,101 @@
+{
+  "athlete": {
+    "level": "intermediate",
+    "injury": {
+      "active": false
+    }
+  },
+  "goal": {
+    "distance": "10k",
+    "race_date": "2026-12-15"
+  },
+  "benchmark": {
+    "distance": "5k",
+    "time_seconds": 1500
+  },
+  "availability": {
+    "sessions_per_week": 4,
+    "days": {
+      "mon": {
+        "max_minutes": 60
+      },
+      "tue": {
+        "max_minutes": 75
+      },
+      "wed": {
+        "max_minutes": 60
+      },
+      "thu": {
+        "max_minutes": 70
+      },
+      "fri": {
+        "max_minutes": 45
+      },
+      "sat": {
+        "max_minutes": 120
+      },
+      "sun": {
+        "max_minutes": 60
+      }
+    }
+  },
+  "weeks": [
+    {
+      "week_index": 1,
+      "phase": "specific",
+      "is_deload": false,
+      "sessions": [
+        {
+          "date": "2026-12-08",
+          "weekday": "tue",
+          "kind": "easy",
+          "distance_km": 8,
+          "total_minutes_est": 50
+        },
+        {
+          "date": "2026-12-10",
+          "weekday": "thu",
+          "kind": "tempo",
+          "distance_km": 8,
+          "total_minutes_est": 50
+        },
+        {
+          "date": "2026-12-12",
+          "weekday": "sat",
+          "kind": "long",
+          "distance_km": 12,
+          "total_minutes_est": 80
+        },
+        {
+          "date": "2026-12-13",
+          "weekday": "sun",
+          "kind": "recovery",
+          "distance_km": 6,
+          "total_minutes_est": 40
+        }
+      ]
+    },
+    {
+      "week_index": 2,
+      "phase": "race",
+      "is_deload": false,
+      "sessions": [
+        {
+          "date": "2026-12-14",
+          "weekday": "mon",
+          "kind": "easy",
+          "distance_km": 5,
+          "total_minutes_est": 30
+        },
+        {
+          "date": "2026-12-15",
+          "weekday": "tue",
+          "kind": "easy",
+          "distance_km": 10,
+          "total_minutes_est": 50
+        }
+      ]
+    }
+  ],
+  "warnings": []
+}

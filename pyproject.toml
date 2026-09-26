@@ -1,0 +1,39 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "running-plan-engine"
+version = "0.1.0"
+description = "Deterministic training-plan engine for a running club association"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+  "pydantic>=2",
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=8",
+  "ruff>=0.6",
+  "mypy>=1.11",
+]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+plan_engine = ["py.typed"]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+packages = ["plan_engine"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"

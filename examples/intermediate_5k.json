@@ -1,0 +1,21 @@
+{
+  "athlete": {
+    "id": "int-5k-demo",
+    "age": 31,
+    "sex": "male",
+    "experience_years": 2.5,
+    "level": "intermediate",
+    "recent_weekly_km": [28, 30, 29, 32],
+    "longest_run_km_last_4w": 12,
+    "availability": [
+      {"weekday": "tue", "max_minutes": 65},
+      {"weekday": "thu", "max_minutes": 70},
+      {"weekday": "sat", "max_minutes": 120},
+      {"weekday": "sun", "max_minutes": 50}
+    ],
+    "constraints": {"injuries": [], "no_track": false, "prefers_time_based": false}
+  },
+  "benchmark": {"distance_km": 5, "time_sec": 1500, "date": "2026-08-20", "is_estimate": false},
+  "goal": {"distance_km": 5, "race_date": "2026-12-06", "target_time_sec": null},
+  "options": {"sessions_per_week": 4, "include_strength": false, "units": "metric", "language": "fr"}
+}
