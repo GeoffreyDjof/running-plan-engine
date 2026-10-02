@@ -6,6 +6,7 @@ Templates v1: 5k/10k/half · beginner 3× / intermediate+advanced 4×.
 from __future__ import annotations
 
 import datetime as dt
+import math
 import statistics
 from types import ModuleType
 from typing import Sequence
@@ -16,11 +17,13 @@ from plan_engine.models import (
     DayAvailability,
     EngineError,
     ErrorCode,
+    PaceZones,
     Plan,
     PlanMeta,
     PlanPhase,
     PlanRequest,
     PlanResult,
+    PlanWarning,
     Session,
     SessionKind,
     StructureBlock,
@@ -210,6 +213,7 @@ def _assemble_plan(request: PlanRequest, as_of: dt.date | None = None) -> PlanRe
     weeks: list[WeekPlan] = []
     last_load_km = 0.0
     block_peak_km = 0.0  # R04: peak within current load block (resets after deload)
+    capped_weeks: list[tuple[int, float, float]] = []  # (week, actual, target)
     for spec in tmpl.week_specs():
         week_km = round(peak * float(spec["volume_frac"]), 1)
         week_km = min(week_km, tmpl.PEAK_WEEKLY_KM_CAP)
@@ -278,6 +282,12 @@ def _assemble_plan(request: PlanRequest, as_of: dt.date | None = None) -> PlanRe
                     pace_zones=pace_zones,
                 )
                 actual_km = round(sum(s.total_km or 0.0 for s in sessions), 1)
+        if (
+            not is_deload
+            and spec["phase"] not in ("taper", "race")
+            and actual_km < week_km * _AVAILABILITY_WARN_RATIO
+        ):
+            capped_weeks.append((int(spec["week_index"]), actual_km, week_km))
         weeks.append(
             WeekPlan(
                 week_index=int(spec["week_index"]),
@@ -304,11 +314,42 @@ def _assemble_plan(request: PlanRequest, as_of: dt.date | None = None) -> PlanRe
             start_date=start_date,
             weeks=n_weeks,
             as_of_date=as_of,
-            warnings=[],
+            warnings=_availability_warnings(capped_weeks),
         ),
         pace_zones=pace_zones,
         plan=weeks,
     )
+
+
+_AVAILABILITY_WARN_RATIO = 0.90  # warn when a load week lands < 90 % of its target
+
+
+def _availability_warnings(capped: Sequence[tuple[int, float, float]]) -> list[PlanWarning]:
+    """P0-11: say when the day minute caps keep load weeks under their target."""
+    if not capped:
+        return []
+    weeks = ", ".join(f"S{w}" for w, _, _ in capped)
+
+    def _span(values: list[float]) -> str:
+        lo, hi = min(values), max(values)
+        return km_fr(lo, 1) if lo == hi else f"{km_fr(lo, 1)} à {km_fr(hi, 1)}"
+
+    done = _span([a for _, a, _ in capped])
+    target = _span([t for _, _, t in capped])
+    return [
+        PlanWarning(
+            code="VOLUME_CAPPED_BY_AVAILABILITY",
+            message_fr=(
+                f"Les minutes disponibles plafonnent le volume en {weeks} : "
+                f"{done} km/sem au lieu de {target} km prévus."
+            ),
+            details={
+                "weeks": [w for w, _, _ in capped],
+                "actual_km": [a for _, a, _ in capped],
+                "target_km": [t for _, _, t in capped],
+            },
+        )
+    ]
 
 
 def _select_template(request: PlanRequest) -> ModuleType | None:
@@ -688,8 +729,147 @@ def _build_week_sessions(
                 )
             )
 
+    if not include_race and phase != "taper":
+        # P0-11: km cut by the per-day minute caps are redistributed, and the
+        # long run is never shorter than the longest footing.
+        sessions = _rebalance_easy_volume(
+            sessions=sessions,
+            week_km=week_km,
+            days=[long_day, quality_day, *easy_use],
+            level=str(tmpl.LEVEL),
+            template_long_cap=float(tmpl.LONG_SHARE_CAP),
+            long_target_km=long_km,
+            pace_zones=pace_zones,
+            week_monday=week_monday,
+            week_index=wi,
+        )
+
     sessions.sort(key=lambda s: s.date)
     return sessions
+
+
+_EASY_FAMILY = (SessionKind.easy, SessionKind.recovery)
+
+
+def _max_km_for_day(day: DayAvailability, kind: SessionKind, pace_zones: PaceZones) -> float:
+    """Largest main-block distance that fits in the day's minutes (wu 10 + cd 5)."""
+    if day.max_minutes <= 0:
+        return 0.0
+    pace = float(getattr(pace_zones, _zone_for_kind(kind)).pace_sec_per_km)
+    main_min = max(float(day.max_minutes) - 15.0, 0.0)
+    return math.floor(main_min * 60.0 / pace * 10.0) / 10.0
+
+
+def _rebalance_easy_volume(
+    *,
+    sessions: list[Session],
+    week_km: float,
+    days: Sequence[DayAvailability],
+    level: str,
+    template_long_cap: float,
+    long_target_km: float,
+    pace_zones: PaceZones,
+    week_monday: dt.date,
+    week_index: int,
+) -> list[Session]:
+    """Fill the week up to ``week_km`` within the available minutes.
+
+    Rules (P0-11, DomainCoach/PlanOrch):
+    - minutes are a ceiling, never a target: no session grows past its day cap;
+    - the week never exceeds ``week_km``;
+    - longest easy footing <= long run <= long-share cap of the level;
+    - the long run only grows up to max(its template target, largest footing
+      cap), so footings can follow it up to their own day cap;
+    - quality sessions (tempo, intervals, ...) are never touched.
+    Deterministic: 0.1 km steps, fixed ordering.
+    """
+    longs = [s for s in sessions if s.kind == SessionKind.long]
+    if len(longs) != 1:
+        return sessions
+    long_s = longs[0]
+    foot = [s for s in sessions if s.kind in _EASY_FAMILY]
+    if not foot:
+        return sessions
+    by_wd = {d.weekday: d for d in days}
+    level_cap = C.LONG_RUN_SHARE_MAX.get(level, template_long_cap) - 0.005
+    # With n footings and long >= every footing, the long share is >= 1/(n+1):
+    # allow that much (still under the level cap) so both bounds can hold.
+    share = min(level_cap, max(template_long_cap, 1.0 / (len(foot) + 1) + 0.01))
+    if share * (len(foot) + 1) < 1.0:
+        return sessions  # both long-run bounds can't hold: keep the template split
+
+    km = {s.id: round(s.total_km or 0.0, 1) for s in sessions}
+    caps = {
+        s.id: _max_km_for_day(by_wd[s.weekday], s.kind, pace_zones)
+        if s.weekday in by_wd
+        else km[s.id]
+        for s in [*foot, long_s]
+    }
+    foot_ids = [s.id for s in foot]  # already in a fixed order
+    lid = long_s.id
+    fixed = sum(km[s.id] for s in sessions if s.id != lid and s.id not in foot_ids)
+
+    def total() -> float:
+        return fixed + km[lid] + sum(km[i] for i in foot_ids)
+
+    def long_ok(new_long: float) -> bool:
+        others = total() - km[lid]
+        return new_long <= share * (others + new_long) + 1e-9
+
+    # 1) Long run >= longest footing: move 0.1 km steps from the longest footing.
+    for _ in range(400):
+        top = max(foot_ids, key=lambda i: (km[i], i))
+        if km[top] <= km[lid] or km[lid] + 0.1 > caps[lid]:
+            break
+        km[top] = round(km[top] - 0.1, 1)
+        km[lid] = round(km[lid] + 0.1, 1)
+
+    # 2) Fill the deficit: shortest footing first (<= its cap and <= long run),
+    #    then the long run (<= its cap, max(template target, largest footing
+    #    cap), and <= share). 0.1 km steps.
+    for _ in range(1000):
+        if total() + 0.1 > week_km + 1e-9:
+            break
+        cands = [i for i in foot_ids if km[i] + 0.1 <= min(caps[i], km[lid]) + 1e-9]
+        if cands:
+            low = min(cands, key=lambda i: (km[i], i))
+            km[low] = round(km[low] + 0.1, 1)
+            continue
+        long_max = min(caps[lid], max(long_target_km, max(caps[i] for i in foot_ids)))
+        if km[lid] + 0.1 <= long_max + 1e-9 and long_ok(km[lid] + 0.1):
+            km[lid] = round(km[lid] + 0.1, 1)
+            continue
+        break
+
+    # 3) Safety wins: if the long share is still above the cap, shorten the
+    #    long run and clip footings to it (both bounds hold, volume drops).
+    for _ in range(400):
+        if long_ok(km[lid]) or km[lid] <= 0.1:
+            break
+        km[lid] = round(km[lid] - 0.1, 1)
+        for i in foot_ids:
+            km[i] = min(km[i], km[lid])
+
+    if all(abs(km[s.id] - (s.total_km or 0.0)) < 0.05 for s in sessions):
+        return sessions
+    out: list[Session] = []
+    for s in sessions:
+        if abs(km[s.id] - (s.total_km or 0.0)) < 0.05:
+            out.append(s)
+            continue
+        out.append(
+            _make_session(
+                week_monday=week_monday,
+                day=by_wd[s.weekday],
+                kind=s.kind,
+                distance_km=km[s.id],
+                pace_zones=pace_zones,
+                week_index=week_index,
+                title_fr=s.title,
+                notes_override=s.notes_fr,
+            )
+        )
+    return out
 
 
 def _split_easy(total: float, n: int) -> list[float]:
