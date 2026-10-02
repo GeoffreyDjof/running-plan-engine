@@ -5,6 +5,9 @@ from __future__ import annotations
 import datetime as dt
 import json
 from pathlib import Path
+from types import SimpleNamespace
+
+import pytest
 
 from plan_engine import planner
 from plan_engine.models import EngineError, ErrorCode, Plan, PlanRequest
@@ -44,11 +47,41 @@ def test_as_of_drives_goal_too_soon() -> None:
     assert late.details["as_of_date"] == "2026-10-02"
 
 
-def test_default_as_of_uses_system_today(monkeypatch) -> None:  # type: ignore[no-untyped-def]
+def test_default_as_of_uses_system_today(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(planner, "_system_today", lambda: dt.date(2026, 10, 2))
     req = _req("intermediate_10k")
     assert planner.resolve_as_of_date(req) == dt.date(2026, 10, 2)
     assert planner.resolve_as_of_date(req, dt.date(2026, 1, 1)) == dt.date(2026, 1, 1)
+
+
+def test_options_as_of_date_beats_system_today(monkeypatch: pytest.MonkeyPatch) -> None:
+    """P0-2 field is read via getattr so this PR does not touch models.py."""
+    monkeypatch.setattr(planner, "_system_today", lambda: dt.date(2026, 10, 2))
+    duck = SimpleNamespace(options=SimpleNamespace(as_of_date=dt.date(2026, 9, 20)))
+    assert planner.resolve_as_of_date(duck) == dt.date(2026, 9, 20)  # type: ignore[arg-type]
+
+
+def test_explicit_as_of_beats_options() -> None:
+    duck = SimpleNamespace(options=SimpleNamespace(as_of_date=dt.date(2026, 9, 20)))
+    assert planner.resolve_as_of_date(duck, dt.date(2026, 1, 1)) == dt.date(2026, 1, 1)  # type: ignore[arg-type]
+
+
+def test_datetime_as_of_is_coerced_to_date() -> None:
+    """datetime is a date subclass; keep a calendar date for arithmetic + JSON."""
+    req = _req("intermediate_10k")
+    instant = dt.datetime(2026, 9, 20, 15, 30, tzinfo=dt.UTC)
+    assert planner.resolve_as_of_date(req, instant) == dt.date(2026, 9, 20)  # type: ignore[arg-type]
+    duck = SimpleNamespace(options=SimpleNamespace(as_of_date=instant))
+    assert planner.resolve_as_of_date(duck) == dt.date(2026, 9, 20)  # type: ignore[arg-type]
+
+
+def test_options_as_of_date_reaches_generate_plan() -> None:
+    """Inject P0-2 field on a live Options instance without changing models.py."""
+    req = _req("beginner_half")
+    object.__setattr__(req.options, "as_of_date", dt.date(2026, 10, 2))
+    plan = planner.generate_plan(req)
+    assert isinstance(plan, Plan)
+    assert plan.meta.generated_at == dt.datetime(2026, 10, 2, tzinfo=dt.UTC)
 
 
 def test_no_race_date_window_follows_as_of() -> None:

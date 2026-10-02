@@ -63,6 +63,15 @@ _TEMPLATES: tuple[ModuleType, ...] = (
 )
 
 
+def _as_calendar_date(value: object) -> dt.date | None:
+    """Accept ``date``; strip time from ``datetime`` (a date subclass)."""
+    if isinstance(value, dt.datetime):
+        return value.date()
+    if isinstance(value, dt.date):
+        return value
+    return None
+
+
 def resolve_as_of_date(
     request: PlanRequest, as_of_date: dt.date | None = None
 ) -> dt.date:
@@ -72,10 +81,11 @@ def resolve_as_of_date(
     (contract P0-2, read defensively) > the machine's current date.
     Same input + same as_of_date -> byte-identical Plan JSON.
     """
-    if as_of_date is not None:
-        return as_of_date
-    from_options = getattr(request.options, "as_of_date", None)
-    if isinstance(from_options, dt.date):
+    explicit = _as_calendar_date(as_of_date)
+    if explicit is not None:
+        return explicit
+    from_options = _as_calendar_date(getattr(request.options, "as_of_date", None))
+    if from_options is not None:
         return from_options
     return _system_today()
 
