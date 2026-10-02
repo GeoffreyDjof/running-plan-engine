@@ -1,0 +1,39 @@
+{
+  "athlete": {
+    "id": "edge-injury-demo",
+    "age": 41,
+    "sex": "male",
+    "experience_years": 3,
+    "level": "intermediate",
+    "recent_weekly_km": [30, 28, 25, 22],
+    "longest_run_km_last_4w": 14,
+    "availability": [
+      {"weekday": "mon", "max_minutes": 50},
+      {"weekday": "wed", "max_minutes": 60},
+      {"weekday": "fri", "max_minutes": 50},
+      {"weekday": "sun", "max_minutes": 100}
+    ],
+    "constraints": {
+      "injuries": ["shin_splints_recent"],
+      "no_track": false,
+      "prefers_time_based": true
+    }
+  },
+  "benchmark": {
+    "distance_km": 10,
+    "time_sec": 3120,
+    "date": "2026-07-01",
+    "is_estimate": false
+  },
+  "goal": {
+    "distance_km": 10,
+    "race_date": "2026-12-06",
+    "target_time_sec": null
+  },
+  "options": {
+    "sessions_per_week": 4,
+    "include_strength": false,
+    "units": "metric",
+    "language": "fr"
+  }
+}

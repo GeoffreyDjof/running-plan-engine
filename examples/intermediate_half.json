@@ -1,0 +1,56 @@
+{
+  "athlete": {
+    "id": "int-half-demo",
+    "age": 34,
+    "sex": "female",
+    "experience_years": 2,
+    "level": "intermediate",
+    "recent_weekly_km": [
+      38,
+      40,
+      39,
+      42
+    ],
+    "longest_run_km_last_4w": 18,
+    "availability": [
+      {
+        "weekday": "tue",
+        "max_minutes": 70
+      },
+      {
+        "weekday": "thu",
+        "max_minutes": 75
+      },
+      {
+        "weekday": "sat",
+        "max_minutes": 180
+      },
+      {
+        "weekday": "sun",
+        "max_minutes": 60
+      }
+    ],
+    "constraints": {
+      "injuries": [],
+      "no_track": false,
+      "prefers_time_based": false
+    }
+  },
+  "benchmark": {
+    "distance_km": 10,
+    "time_sec": 2940,
+    "date": "2026-08-15",
+    "is_estimate": false
+  },
+  "goal": {
+    "distance_km": 21.0975,
+    "race_date": "2026-12-26",
+    "target_time_sec": null
+  },
+  "options": {
+    "sessions_per_week": 4,
+    "include_strength": false,
+    "units": "metric",
+    "language": "fr"
+  }
+}

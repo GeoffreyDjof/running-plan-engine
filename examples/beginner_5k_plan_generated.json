@@ -1,0 +1,984 @@
+{
+  "meta": {
+    "engine_version": "0.1.0",
+    "generated_at": "2026-09-26T09:00:00Z",
+    "method": "vdot_templates_v1:beginner_5k_3x_v1",
+    "vdot": 35.0,
+    "paces_confidence": "low",
+    "start_date": "2026-09-28",
+    "weeks": 10,
+    "warnings": []
+  },
+  "pace_zones": {
+    "E": {
+      "pace_sec_per_km": 432,
+      "label": "Easy"
+    },
+    "M": {
+      "pace_sec_per_km": 360,
+      "label": "Marathon"
+    },
+    "T": {
+      "pace_sec_per_km": 340,
+      "label": "Threshold"
+    },
+    "I": {
+      "pace_sec_per_km": 312,
+      "label": "Interval"
+    },
+    "R": {
+      "pace_sec_per_km": 291,
+      "label": "Repetition"
+    }
+  },
+  "plan": [
+    {
+      "week_index": 1,
+      "phase": "base",
+      "target_km": 19.0,
+      "is_deload": false,
+      "sessions": [
+        {
+          "id": "w1-tue-easy",
+          "weekday": "tue",
+          "date": "2026-09-29",
+          "kind": "easy",
+          "title": "Footing easy",
+          "structure": [
+            {
+              "block": "warmup",
+              "duration_min": 9.719999999999999,
+              "distance_km": null,
+              "zone": "E"
+            },
+            {
+              "block": "main",
+              "duration_min": 35.3,
+              "distance_km": 4.9,
+              "zone": "E"
+            },
+            {
+              "block": "cooldown",
+              "duration_min": 5.0,
+              "distance_km": null,
+              "zone": "E"
+            }
+          ],
+          "total_km": 4.9,
+          "total_minutes_est": 50.0,
+          "load": null,
+          "notes_fr": "Allure confortable, conversation possible."
+        },
+        {
+          "id": "w1-thu-easy",
+          "weekday": "thu",
+          "date": "2026-10-01",
+          "kind": "easy",
+          "title": "Footing easy",
+          "structure": [
+            {
+              "block": "warmup",
+              "duration_min": 9.719999999999999,
+              "distance_km": null,
+              "zone": "E"
+            },
+            {
+              "block": "main",
+              "duration_min": 35.3,
+              "distance_km": 4.9,
+              "zone": "E"
+            },
+            {
+              "block": "cooldown",
+              "duration_min": 5.0,
+              "distance_km": null,
+              "zone": "E"
+            }
+          ],
+          "total_km": 4.9,
+          "total_minutes_est": 50.0,
+          "load": null,
+          "notes_fr": "Allure confortable, conversation possible."
+        },
+        {
+          "id": "w1-sat-long",
+          "weekday": "sat",
+          "date": "2026-10-03",
+          "kind": "long",
+          "title": "Sortie longue",
+          "structure": [
+            {
+              "block": "warmup",
+              "duration_min": 10.0,
+              "distance_km": null,
+              "zone": "E"
+            },
+            {
+              "block": "main",
+              "duration_min": 34.6,
+              "distance_km": 4.8,
+              "zone": "E"
+            },
+            {
+              "block": "cooldown",
+              "duration_min": 5.0,
+              "distance_km": null,
+              "zone": "E"
+            }
+          ],
+          "total_km": 4.8,
+          "total_minutes_est": 49.6,
+          "load": null,
+          "notes_fr": "Endurance fondamentale ; rester en zone E."
+        }
+      ]
+    },
+    {
+      "week_index": 2,
+      "phase": "base",
+      "target_km": 21.2,
+      "is_deload": false,
+      "sessions": [
+        {
+          "id": "w2-tue-easy",
+          "weekday": "tue",
+          "date": "2026-10-06",
+          "kind": "easy",
+          "title": "Footing + éducatifs / strides",
+          "structure": [
+            {
+              "block": "warmup",
+              "duration_min": 10.0,
+              "distance_km": null,
+              "zone": "E"
+            },
+            {
+              "block": "main",
+              "duration_min": 21.6,
+              "distance_km": 3.0,
+              "zone": "E"
+            },
+            {
+              "block": "cooldown",
+              "duration_min": 5.0,
+              "distance_km": null,
+              "zone": "E"
+            }
+          ],
+          "total_km": 3.0,
+          "total_minutes_est": 36.6,
+          "load": null,
+          "notes_fr": "Footing easy + 4–6 strides progressifs (pas de reps agressives)."
+        },
+        {
+          "id": "w2-thu-easy",
+          "weekday": "thu",
+          "date": "2026-10-08",
+          "kind": "easy",
+          "title": "Footing easy",
+          "structure": [
+            {
+              "block": "warmup",
+              "duration_min": 9.719999999999999,
+              "distance_km": null,
+              "zone": "E"
+            },
+            {
+              "block": "main",
+              "duration_min": 35.3,
+              "distance_km": 4.9,
+              "zone": "E"
+            },
+            {
+              "block": "cooldown",
+              "duration_min": 5.0,
+              "distance_km": null,
+              "zone": "E"
+            }
+          ],
+          "total_km": 4.9,
+          "total_minutes_est": 50.0,
+          "load": null,
+          "notes_fr": "Allure confortable, conversation possible."
+        },
+        {
+          "id": "w2-sat-long",
+          "weekday": "sat",
+          "date": "2026-10-10",
+          "kind": "long",
+          "title": "Sortie longue",
+          "structure": [
+            {
+              "block": "warmup",
+              "duration_min": 10.0,
+              "distance_km": null,
+              "zone": "E"
+            },
+            {
+              "block": "main",
+              "duration_min": 28.1,
+              "distance_km": 3.9,
+              "zone": "E"
+            },
+            {
+              "block": "cooldown",
+              "duration_min": 5.0,
+              "distance_km": null,
+              "zone": "E"
+            }
+          ],
+          "total_km": 3.9,
+          "total_minutes_est": 43.1,
+          "load": null,
+          "notes_fr": "Endurance fondamentale ; rester en zone E."
+        }
+      ]
+    },
+    {
+      "week_index": 3,
+      "phase": "base",
+      "target_km": 22.8,
+      "is_deload": false,
+      "sessions": [
+        {
+          "id": "w3-tue-easy",
+          "weekday": "tue",
+          "date": "2026-10-13",
+          "kind": "easy",
+          "title": "Footing + éducatifs / strides",
+          "structure": [
+            {
+              "block": "warmup",
+              "duration_min": 10.0,
+              "distance_km": null,
+              "zone": "E"
+            },
+            {
+              "block": "main",
+              "duration_min": 23.0,
+              "distance_km": 3.2,
+              "zone": "E"
+            },
+            {
+              "block": "cooldown",
+              "duration_min": 5.0,
+              "distance_km": null,
+              "zone": "E"
+            }
+          ],
+          "total_km": 3.2,
+          "total_minutes_est": 38.0,
+          "load": null,
+          "notes_fr": "Footing easy + 4–6 strides progressifs (pas de reps agressives)."
+        },
+        {
+          "id": "w3-thu-easy",
+          "weekday": "thu",
+          "date": "2026-10-15",
+          "kind": "easy",
+          "title": "Footing easy",
+          "structure": [
+            {
+              "block": "warmup",
+              "duration_min": 9.719999999999999,
+              "distance_km": null,
+              "zone": "E"
+            },
+            {
+              "block": "main",
+              "duration_min": 35.3,
+              "distance_km": 4.9,
+              "zone": "E"
+            },
+            {
+              "block": "cooldown",
+              "duration_min": 5.0,
+              "distance_km": null,
+              "zone": "E"
+            }
+          ],
+          "total_km": 4.9,
+          "total_minutes_est": 50.0,
+          "load": null,
+          "notes_fr": "Allure confortable, conversation possible."
+        },
+        {
+          "id": "w3-sat-long",
+          "weekday": "sat",
+          "date": "2026-10-17",
+          "kind": "long",
+          "title": "Sortie longue",
+          "structure": [
+            {
+              "block": "warmup",
+              "duration_min": 10.0,
+              "distance_km": null,
+              "zone": "E"
+            },
+            {
+              "block": "main",
+              "duration_min": 28.8,
+              "distance_km": 4.0,
+              "zone": "E"
+            },
+            {
+              "block": "cooldown",
+              "duration_min": 5.0,
+              "distance_km": null,
+              "zone": "E"
+            }
+          ],
+          "total_km": 4.0,
+          "total_minutes_est": 43.8,
+          "load": null,
+          "notes_fr": "Endurance fondamentale ; rester en zone E."
+        }
+      ]
+    },
+    {
+      "week_index": 4,
+      "phase": "base",
+      "target_km": 10.9,
+      "is_deload": true,
+      "sessions": [
+        {
+          "id": "w4-tue-easy",
+          "weekday": "tue",
+          "date": "2026-10-20",
+          "kind": "easy",
+          "title": "Footing easy",
+          "structure": [
+            {
+              "block": "warmup",
+              "duration_min": 10.0,
+              "distance_km": null,
+              "zone": "E"
+            },
+            {
+              "block": "main",
+              "duration_min": 28.1,
+              "distance_km": 3.9,
+              "zone": "E"
+            },
+            {
+              "block": "cooldown",
+              "duration_min": 5.0,
+              "distance_km": null,
+              "zone": "E"
+            }
+          ],
+          "total_km": 3.9,
+          "total_minutes_est": 43.1,
+          "load": null,
+          "notes_fr": "Allure confortable, conversation possible."
+        },
+        {
+          "id": "w4-thu-recovery",
+          "weekday": "thu",
+          "date": "2026-10-22",
+          "kind": "recovery",
+          "title": "Récupération",
+          "structure": [
+            {
+              "block": "warmup",
+              "duration_min": 10.0,
+              "distance_km": null,
+              "zone": "E"
+            },
+            {
+              "block": "main",
+              "duration_min": 28.1,
+              "distance_km": 3.9,
+              "zone": "E"
+            },
+            {
+              "block": "cooldown",
+              "duration_min": 5.0,
+              "distance_km": null,
+              "zone": "E"
+            }
+          ],
+          "total_km": 3.9,
+          "total_minutes_est": 43.1,
+          "load": null,
+          "notes_fr": "Très souple, jambes légères."
+        },
+        {
+          "id": "w4-sat-long",
+          "weekday": "sat",
+          "date": "2026-10-24",
+          "kind": "long",
+          "title": "Sortie longue",
+          "structure": [
+            {
+              "block": "warmup",
+              "duration_min": 10.0,
+              "distance_km": null,
+              "zone": "E"
+            },
+            {
+              "block": "main",
+              "duration_min": 22.3,
+              "distance_km": 3.1,
+              "zone": "E"
+            },
+            {
+              "block": "cooldown",
+              "duration_min": 5.0,
+              "distance_km": null,
+              "zone": "E"
+            }
+          ],
+          "total_km": 3.1,
+          "total_minutes_est": 37.3,
+          "load": null,
+          "notes_fr": "Endurance fondamentale ; rester en zone E."
+        }
+      ]
+    },
+    {
+      "week_index": 5,
+      "phase": "development",
+      "target_km": 24.4,
+      "is_deload": false,
+      "sessions": [
+        {
+          "id": "w5-tue-easy",
+          "weekday": "tue",
+          "date": "2026-10-27",
+          "kind": "easy",
+          "title": "Footing + éducatifs / strides",
+          "structure": [
+            {
+              "block": "warmup",
+              "duration_min": 10.0,
+              "distance_km": null,
+              "zone": "E"
+            },
+            {
+              "block": "main",
+              "duration_min": 24.5,
+              "distance_km": 3.4,
+              "zone": "E"
+            },
+            {
+              "block": "cooldown",
+              "duration_min": 5.0,
+              "distance_km": null,
+              "zone": "E"
+            }
+          ],
+          "total_km": 3.4,
+          "total_minutes_est": 39.5,
+          "load": null,
+          "notes_fr": "Footing easy + 4–6 strides progressifs (pas de reps agressives)."
+        },
+        {
+          "id": "w5-thu-easy",
+          "weekday": "thu",
+          "date": "2026-10-29",
+          "kind": "easy",
+          "title": "Footing easy",
+          "structure": [
+            {
+              "block": "warmup",
+              "duration_min": 9.719999999999999,
+              "distance_km": null,
+              "zone": "E"
+            },
+            {
+              "block": "main",
+              "duration_min": 35.3,
+              "distance_km": 4.9,
+              "zone": "E"
+            },
+            {
+              "block": "cooldown",
+              "duration_min": 5.0,
+              "distance_km": null,
+              "zone": "E"
+            }
+          ],
+          "total_km": 4.9,
+          "total_minutes_est": 50.0,
+          "load": null,
+          "notes_fr": "Allure confortable, conversation possible."
+        },
+        {
+          "id": "w5-sat-long",
+          "weekday": "sat",
+          "date": "2026-10-31",
+          "kind": "long",
+          "title": "Sortie longue",
+          "structure": [
+            {
+              "block": "warmup",
+              "duration_min": 10.0,
+              "distance_km": null,
+              "zone": "E"
+            },
+            {
+              "block": "main",
+              "duration_min": 29.5,
+              "distance_km": 4.1,
+              "zone": "E"
+            },
+            {
+              "block": "cooldown",
+              "duration_min": 5.0,
+              "distance_km": null,
+              "zone": "E"
+            }
+          ],
+          "total_km": 4.1,
+          "total_minutes_est": 44.5,
+          "load": null,
+          "notes_fr": "Endurance fondamentale ; rester en zone E."
+        }
+      ]
+    },
+    {
+      "week_index": 6,
+      "phase": "development",
+      "target_km": 26.0,
+      "is_deload": false,
+      "sessions": [
+        {
+          "id": "w6-tue-easy",
+          "weekday": "tue",
+          "date": "2026-11-03",
+          "kind": "easy",
+          "title": "Footing + éducatifs / strides",
+          "structure": [
+            {
+              "block": "warmup",
+              "duration_min": 10.0,
+              "distance_km": null,
+              "zone": "E"
+            },
+            {
+              "block": "main",
+              "duration_min": 25.9,
+              "distance_km": 3.6,
+              "zone": "E"
+            },
+            {
+              "block": "cooldown",
+              "duration_min": 5.0,
+              "distance_km": null,
+              "zone": "E"
+            }
+          ],
+          "total_km": 3.6,
+          "total_minutes_est": 40.9,
+          "load": null,
+          "notes_fr": "Footing easy + 4–6 strides progressifs (pas de reps agressives)."
+        },
+        {
+          "id": "w6-thu-easy",
+          "weekday": "thu",
+          "date": "2026-11-05",
+          "kind": "easy",
+          "title": "Footing easy",
+          "structure": [
+            {
+              "block": "warmup",
+              "duration_min": 9.719999999999999,
+              "distance_km": null,
+              "zone": "E"
+            },
+            {
+              "block": "main",
+              "duration_min": 35.3,
+              "distance_km": 4.9,
+              "zone": "E"
+            },
+            {
+              "block": "cooldown",
+              "duration_min": 5.0,
+              "distance_km": null,
+              "zone": "E"
+            }
+          ],
+          "total_km": 4.9,
+          "total_minutes_est": 50.0,
+          "load": null,
+          "notes_fr": "Allure confortable, conversation possible."
+        },
+        {
+          "id": "w6-sat-long",
+          "weekday": "sat",
+          "date": "2026-11-07",
+          "kind": "long",
+          "title": "Sortie longue",
+          "structure": [
+            {
+              "block": "warmup",
+              "duration_min": 10.0,
+              "distance_km": null,
+              "zone": "E"
+            },
+            {
+              "block": "main",
+              "duration_min": 30.2,
+              "distance_km": 4.2,
+              "zone": "E"
+            },
+            {
+              "block": "cooldown",
+              "duration_min": 5.0,
+              "distance_km": null,
+              "zone": "E"
+            }
+          ],
+          "total_km": 4.2,
+          "total_minutes_est": 45.2,
+          "load": null,
+          "notes_fr": "Endurance fondamentale ; rester en zone E."
+        }
+      ]
+    },
+    {
+      "week_index": 7,
+      "phase": "development",
+      "target_km": 9.5,
+      "is_deload": true,
+      "sessions": [
+        {
+          "id": "w7-tue-easy",
+          "weekday": "tue",
+          "date": "2026-11-10",
+          "kind": "easy",
+          "title": "Footing easy",
+          "structure": [
+            {
+              "block": "warmup",
+              "duration_min": 10.0,
+              "distance_km": null,
+              "zone": "E"
+            },
+            {
+              "block": "main",
+              "duration_min": 24.5,
+              "distance_km": 3.4,
+              "zone": "E"
+            },
+            {
+              "block": "cooldown",
+              "duration_min": 5.0,
+              "distance_km": null,
+              "zone": "E"
+            }
+          ],
+          "total_km": 3.4,
+          "total_minutes_est": 39.5,
+          "load": null,
+          "notes_fr": "Allure confortable, conversation possible."
+        },
+        {
+          "id": "w7-thu-recovery",
+          "weekday": "thu",
+          "date": "2026-11-12",
+          "kind": "recovery",
+          "title": "Récupération",
+          "structure": [
+            {
+              "block": "warmup",
+              "duration_min": 10.0,
+              "distance_km": null,
+              "zone": "E"
+            },
+            {
+              "block": "main",
+              "duration_min": 24.5,
+              "distance_km": 3.4,
+              "zone": "E"
+            },
+            {
+              "block": "cooldown",
+              "duration_min": 5.0,
+              "distance_km": null,
+              "zone": "E"
+            }
+          ],
+          "total_km": 3.4,
+          "total_minutes_est": 39.5,
+          "load": null,
+          "notes_fr": "Très souple, jambes légères."
+        },
+        {
+          "id": "w7-sat-long",
+          "weekday": "sat",
+          "date": "2026-11-14",
+          "kind": "long",
+          "title": "Sortie longue",
+          "structure": [
+            {
+              "block": "warmup",
+              "duration_min": 10.0,
+              "distance_km": null,
+              "zone": "E"
+            },
+            {
+              "block": "main",
+              "duration_min": 19.4,
+              "distance_km": 2.7,
+              "zone": "E"
+            },
+            {
+              "block": "cooldown",
+              "duration_min": 5.0,
+              "distance_km": null,
+              "zone": "E"
+            }
+          ],
+          "total_km": 2.7,
+          "total_minutes_est": 34.4,
+          "load": null,
+          "notes_fr": "Endurance fondamentale ; rester en zone E."
+        }
+      ]
+    },
+    {
+      "week_index": 8,
+      "phase": "specific",
+      "target_km": 27.1,
+      "is_deload": false,
+      "sessions": [
+        {
+          "id": "w8-tue-easy",
+          "weekday": "tue",
+          "date": "2026-11-17",
+          "kind": "easy",
+          "title": "Footing + éducatifs / strides",
+          "structure": [
+            {
+              "block": "warmup",
+              "duration_min": 10.0,
+              "distance_km": null,
+              "zone": "E"
+            },
+            {
+              "block": "main",
+              "duration_min": 27.4,
+              "distance_km": 3.8,
+              "zone": "E"
+            },
+            {
+              "block": "cooldown",
+              "duration_min": 5.0,
+              "distance_km": null,
+              "zone": "E"
+            }
+          ],
+          "total_km": 3.8,
+          "total_minutes_est": 42.4,
+          "load": null,
+          "notes_fr": "Footing easy + 4–6 strides progressifs (pas de reps agressives)."
+        },
+        {
+          "id": "w8-thu-easy",
+          "weekday": "thu",
+          "date": "2026-11-19",
+          "kind": "easy",
+          "title": "Footing easy",
+          "structure": [
+            {
+              "block": "warmup",
+              "duration_min": 9.719999999999999,
+              "distance_km": null,
+              "zone": "E"
+            },
+            {
+              "block": "main",
+              "duration_min": 35.3,
+              "distance_km": 4.9,
+              "zone": "E"
+            },
+            {
+              "block": "cooldown",
+              "duration_min": 5.0,
+              "distance_km": null,
+              "zone": "E"
+            }
+          ],
+          "total_km": 4.9,
+          "total_minutes_est": 50.0,
+          "load": null,
+          "notes_fr": "Allure confortable, conversation possible."
+        },
+        {
+          "id": "w8-sat-long",
+          "weekday": "sat",
+          "date": "2026-11-21",
+          "kind": "long",
+          "title": "Sortie longue",
+          "structure": [
+            {
+              "block": "warmup",
+              "duration_min": 10.0,
+              "distance_km": null,
+              "zone": "E"
+            },
+            {
+              "block": "main",
+              "duration_min": 31.0,
+              "distance_km": 4.3,
+              "zone": "E"
+            },
+            {
+              "block": "cooldown",
+              "duration_min": 5.0,
+              "distance_km": null,
+              "zone": "E"
+            }
+          ],
+          "total_km": 4.3,
+          "total_minutes_est": 46.0,
+          "load": null,
+          "notes_fr": "Endurance fondamentale ; rester en zone E."
+        }
+      ]
+    },
+    {
+      "week_index": 9,
+      "phase": "taper",
+      "target_km": 14.9,
+      "is_deload": false,
+      "sessions": [
+        {
+          "id": "w9-thu-recovery",
+          "weekday": "thu",
+          "date": "2026-11-26",
+          "kind": "recovery",
+          "title": "Récupération",
+          "structure": [
+            {
+              "block": "warmup",
+              "duration_min": 9.719999999999999,
+              "distance_km": null,
+              "zone": "E"
+            },
+            {
+              "block": "main",
+              "duration_min": 35.3,
+              "distance_km": 4.9,
+              "zone": "E"
+            },
+            {
+              "block": "cooldown",
+              "duration_min": 5.0,
+              "distance_km": null,
+              "zone": "E"
+            }
+          ],
+          "total_km": 4.9,
+          "total_minutes_est": 50.0,
+          "load": null,
+          "notes_fr": "Très souple, jambes légères."
+        },
+        {
+          "id": "w9-sat-easy",
+          "weekday": "sat",
+          "date": "2026-11-28",
+          "kind": "easy",
+          "title": "Footing long souple",
+          "structure": [
+            {
+              "block": "warmup",
+              "duration_min": 10.0,
+              "distance_km": null,
+              "zone": "E"
+            },
+            {
+              "block": "main",
+              "duration_min": 30.2,
+              "distance_km": 4.2,
+              "zone": "E"
+            },
+            {
+              "block": "cooldown",
+              "duration_min": 5.0,
+              "distance_km": null,
+              "zone": "E"
+            }
+          ],
+          "total_km": 4.2,
+          "total_minutes_est": 45.2,
+          "load": null,
+          "notes_fr": "Allure confortable, conversation possible."
+        }
+      ]
+    },
+    {
+      "week_index": 10,
+      "phase": "race",
+      "target_km": 7.6,
+      "is_deload": false,
+      "sessions": [
+        {
+          "id": "w10-sat-easy",
+          "weekday": "sat",
+          "date": "2026-12-05",
+          "kind": "easy",
+          "title": "Footing pré-course",
+          "structure": [
+            {
+              "block": "warmup",
+              "duration_min": 10.0,
+              "distance_km": null,
+              "zone": "E"
+            },
+            {
+              "block": "main",
+              "duration_min": 21.6,
+              "distance_km": 3.0,
+              "zone": "E"
+            },
+            {
+              "block": "cooldown",
+              "duration_min": 5.0,
+              "distance_km": null,
+              "zone": "E"
+            }
+          ],
+          "total_km": 3.0,
+          "total_minutes_est": 36.6,
+          "load": null,
+          "notes_fr": "Allure confortable, conversation possible."
+        },
+        {
+          "id": "w10-sun-race_pace",
+          "weekday": "sun",
+          "date": "2026-12-06",
+          "kind": "race_pace",
+          "title": "Course 5 km",
+          "structure": [
+            {
+              "block": "warmup",
+              "duration_min": 10.0,
+              "distance_km": null,
+              "zone": "E"
+            },
+            {
+              "block": "main",
+              "duration_min": 28.3,
+              "distance_km": 5.0,
+              "zone": "T"
+            },
+            {
+              "block": "cooldown",
+              "duration_min": 5.0,
+              "distance_km": null,
+              "zone": "E"
+            }
+          ],
+          "total_km": 5.0,
+          "total_minutes_est": 43.3,
+          "load": null,
+          "notes_fr": "Allure objectif 10k ; rester lucide sur l'effort."
+        }
+      ]
+    }
+  ]
+}

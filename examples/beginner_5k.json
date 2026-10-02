@@ -1,0 +1,20 @@
+{
+  "athlete": {
+    "id": "beg-5k-demo",
+    "age": 26,
+    "sex": "female",
+    "experience_years": 0.4,
+    "level": "beginner",
+    "recent_weekly_km": [16, 18, 17, 19],
+    "longest_run_km_last_4w": 8,
+    "availability": [
+      {"weekday": "tue", "max_minutes": 50},
+      {"weekday": "thu", "max_minutes": 50},
+      {"weekday": "sat", "max_minutes": 90}
+    ],
+    "constraints": {"injuries": [], "no_track": true, "prefers_time_based": false}
+  },
+  "benchmark": null,
+  "goal": {"distance_km": 5, "race_date": "2026-12-06", "target_time_sec": null},
+  "options": {"sessions_per_week": 3, "include_strength": false, "units": "metric", "language": "fr"}
+}

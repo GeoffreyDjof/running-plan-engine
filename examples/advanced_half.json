@@ -1,0 +1,56 @@
+{
+  "athlete": {
+    "id": "adv-half-demo",
+    "age": 35,
+    "sex": "male",
+    "experience_years": 8,
+    "level": "advanced",
+    "recent_weekly_km": [
+      60,
+      62,
+      61,
+      65
+    ],
+    "longest_run_km_last_4w": 24,
+    "availability": [
+      {
+        "weekday": "tue",
+        "max_minutes": 80
+      },
+      {
+        "weekday": "thu",
+        "max_minutes": 85
+      },
+      {
+        "weekday": "sat",
+        "max_minutes": 180
+      },
+      {
+        "weekday": "sun",
+        "max_minutes": 70
+      }
+    ],
+    "constraints": {
+      "injuries": [],
+      "no_track": false,
+      "prefers_time_based": false
+    }
+  },
+  "benchmark": {
+    "distance_km": 10,
+    "time_sec": 2280,
+    "date": "2026-08-10",
+    "is_estimate": false
+  },
+  "goal": {
+    "distance_km": 21.0975,
+    "race_date": "2026-12-26",
+    "target_time_sec": null
+  },
+  "options": {
+    "sessions_per_week": 4,
+    "include_strength": false,
+    "units": "metric",
+    "language": "fr"
+  }
+}
