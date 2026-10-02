@@ -19,6 +19,11 @@ LEVEL_FR: dict[str, str] = {
     "intermediate": "intermédiaire",
     "advanced": "confirmé",
 }
+CONFIDENCE_FR: dict[str, str] = {
+    "high": "élevée",
+    "medium": "moyenne",
+    "low": "faible",
+}
 
 
 def goal_key_fr(key: str) -> str:
@@ -33,3 +38,7 @@ def km_fr(value: float, decimals: int | None = None) -> str:
     """Format km with a French decimal comma: 9.4 -> '9,4', 10.0 -> '10'."""
     text = f"{value:.{decimals}f}" if decimals is not None else f"{value:g}"
     return text.replace(".", ",")
+
+
+def confidence_fr(value: str) -> str:
+    return CONFIDENCE_FR.get(value, value)
