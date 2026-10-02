@@ -21,6 +21,7 @@ from typing import Any
 
 from pydantic import ValidationError
 
+from plan_engine.labels import GOAL_KM_FR, LEVEL_FR
 from plan_engine.models import EngineError, Plan, PlanRequest
 from plan_engine.planner import generate_plan
 
@@ -91,8 +92,8 @@ def build_request(
     return PlanRequest.model_validate(data)
 
 
-_GOAL_FR = {5.0: "5 km", 10.0: "10 km", 21.0975: "semi-marathon", 42.195: "marathon"}
-_LEVEL_FR = {"beginner": "débutant", "intermediate": "intermédiaire", "advanced": "confirmé"}
+_GOAL_FR = GOAL_KM_FR
+_LEVEL_FR = LEVEL_FR
 
 
 def _goal_fr(distance_km: float) -> str:
