@@ -737,6 +737,8 @@ def _make_session(
 ) -> Session:
     wd_index = _WEEKDAY_ORDER.index(day.weekday)
     date = force_date or (week_monday + dt.timedelta(days=wd_index))
+    # P0-12: the label must follow the real date (force_date may differ from day).
+    weekday = _weekday_from_date(date)
     zone_key = _zone_for_kind(kind)
     pace = getattr(pace_zones, zone_key).pace_sec_per_km
     wu = 10.0 if kind != SessionKind.strides else 8.0
@@ -776,8 +778,8 @@ def _make_session(
         SessionKind.strides: "Footing easy + 4–6 strides progressifs (pas de reps agressives).",
     }.get(kind, "")
     return Session(
-        id=f"w{week_index}-{day.weekday.value}-{kind.value}",
-        weekday=day.weekday,
+        id=f"w{week_index}-{weekday.value}-{kind.value}",
+        weekday=weekday,
         date=date,
         kind=kind,
         title=title_fr,
