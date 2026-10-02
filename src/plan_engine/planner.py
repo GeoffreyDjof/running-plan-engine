@@ -38,6 +38,7 @@ from plan_engine.templates import (
     intermediate_5k_4x,
     intermediate_half_4x,
 )
+from plan_engine.validator import ValidationResult, validate_plan
 
 _ENGINE_VERSION = "0.1.0"
 _WEEKDAY_ORDER = (
@@ -64,7 +65,49 @@ _TEMPLATES: tuple[ModuleType, ...] = (
 
 
 def generate_plan(request: PlanRequest) -> PlanResult:
-    """Assemble a deterministic Plan from PlanRequest (no LLM)."""
+    """Assemble a deterministic Plan from PlanRequest (no LLM), then validate it.
+
+    Every Plan returned here has passed ``validate_plan`` with the athlete
+    context from the request. A plan that fails any safety rule is never
+    returned: the caller gets a typed EngineError (INJURY_BLOCKS_QUALITY if an
+    injury rule fired, VALIDATION_FAILED otherwise) with rule_id + details.
+    """
+    result = _assemble_plan(request)
+    if isinstance(result, EngineError):
+        return result
+    return _validated_or_error(result, request)
+
+
+def _validated_or_error(plan: Plan, request: PlanRequest) -> PlanResult:
+    payload = plan.model_dump(mode="json")
+    payload["_request"] = request.model_dump(mode="json")
+    vr = validate_plan(payload)
+    if vr.ok:
+        return plan
+    return _validation_error(vr)
+
+
+def _validation_error(vr: ValidationResult) -> EngineError:
+    injury = [e for e in vr.errors if e.code == ErrorCode.INJURY_BLOCKS_QUALITY.value]
+    first = injury[0] if injury else vr.errors[0]
+    code = ErrorCode.INJURY_BLOCKS_QUALITY if injury else ErrorCode.VALIDATION_FAILED
+    broken = sorted({e.rule_id for e in vr.errors if e.rule_id})
+    return EngineError(
+        code=code,
+        message_fr=(
+            "Plan refusé par le validateur de sécurité "
+            f"({first.rule_id or 'parse'}): {first.message}"
+        ),
+        details={
+            "rule_id": first.rule_id,
+            "broken_rules": broken,
+            "errors": [e.model_dump(mode="json") for e in vr.errors],
+        },
+    )
+
+
+def _assemble_plan(request: PlanRequest) -> PlanResult:
+    """Build the raw plan from templates. Not validated — use generate_plan."""
     err = _preflight_availability(request)
     if err is not None:
         return err
