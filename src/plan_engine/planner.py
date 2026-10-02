@@ -252,6 +252,31 @@ def _assemble_plan(request: PlanRequest, as_of: dt.date | None = None) -> PlanRe
                     pace_zones=pace_zones,
                 )
                 actual_km = round(sum(s.total_km or 0.0 for s in sessions), 1)
+        elif (
+            not is_deload
+            and spec["phase"] not in ("taper", "race")
+            and last_load_km > 0
+        ):
+            # Low volumes: session rounding/floors can push the *actual*
+            # load→load step past the target. Shrink until within cap.
+            cap_km = last_load_km * (1.0 + C.LOAD_STEP_ACTUAL_MAX)
+            for _ in range(6):
+                if actual_km <= cap_km or actual_km <= 0:
+                    break
+                week_km = round(week_km * (cap_km / actual_km) - 0.1, 1)
+                sessions = _build_week_sessions(
+                    request=request,
+                    tmpl=tmpl,
+                    spec=spec,
+                    week_km=week_km,
+                    start_date=start_date,
+                    race_date=race_date,
+                    long_day=long_day,
+                    quality_day=quality_day,
+                    easy_days=easy_days,
+                    pace_zones=pace_zones,
+                )
+                actual_km = round(sum(s.total_km or 0.0 for s in sessions), 1)
         weeks.append(
             WeekPlan(
                 week_index=int(spec["week_index"]),
@@ -361,36 +386,72 @@ def _resolve_paces(request: PlanRequest):
     return pace_zones_from_vdot(vdot), vdot, "low"
 
 
+def reference_weekly_km(recent_weekly_km: Sequence[float]) -> float | None:
+    """ref_km = min(median of last 4 weeks, max of last 2 weeks). Newest last.
+
+    Using the min avoids starting from an inflated average when volume drops.
+    """
+    recent = [float(x) for x in recent_weekly_km]
+    if not recent:
+        return None
+    last_n = recent[-C.START_REF_WEEKS :]
+    last_2 = recent[-C.START_REF_RECENT_WEEKS :]
+    return min(float(statistics.median(last_n)), max(last_2))
+
+
+def _volume_too_low(
+    message_fr: str, tmpl: ModuleType, ref_km: float | None, **extra: object
+) -> EngineError:
+    return EngineError(
+        code=ErrorCode.VOLUME_TOO_LOW_FOR_GOAL,
+        message_fr=message_fr,
+        details={
+            "ref_weekly_km": ref_km,
+            "level": tmpl.LEVEL,
+            "goal_distance_key": tmpl.GOAL_KEY,
+            **extra,
+        },
+    )
+
+
 def _peak_km(request: PlanRequest, tmpl: ModuleType) -> float | EngineError:
-    recent = list(request.athlete.recent_weekly_km)
-    if recent:
-        start = float(statistics.median(recent))
-    else:
-        start = {"beginner": 18.0, "intermediate": 30.0, "advanced": 50.0}.get(
-            tmpl.LEVEL, 30.0
+    ref_km = reference_weekly_km(request.athlete.recent_weekly_km)
+    min_for_goal = C.RECENT_KM_MIN_FOR_GOAL[tmpl.GOAL_KEY][tmpl.LEVEL]
+    if ref_km is None:
+        return _volume_too_low(
+            "Volume récent inconnu : renseigne tes km des 4 dernières semaines "
+            "pour qu'on parte de ton vrai niveau.",
+            tmpl,
+            ref_km,
+            min_recent_km=min_for_goal,
         )
-    bounds = {
-        "beginner": (12.0, 32.0) if tmpl.GOAL_KEY != "half" else (18.0, 38.0),
-        "intermediate": (22.0, 45.0) if tmpl.GOAL_KEY != "half" else (30.0, 58.0),
-        "advanced": (40.0, 72.0) if tmpl.GOAL_KEY != "half" else (50.0, 85.0),
-    }
-    lo, hi = bounds.get(tmpl.LEVEL, (22.0, 45.0))
-    start = max(lo, min(start, hi))
+    if ref_km < min_for_goal:
+        return _volume_too_low(
+            f"Volume récent trop bas pour cet objectif : {ref_km:g} km/sem, "
+            f"il faut au moins {min_for_goal:g} km/sem réguliers pour un "
+            f"{tmpl.GOAL_KEY} niveau {tmpl.LEVEL}. Vise d'abord une distance plus "
+            "courte ou monte progressivement ton volume.",
+            tmpl,
+            ref_km,
+            min_recent_km=min_for_goal,
+        )
+    week1_cap = C.START_VOLUME_MAX_RATIO * ref_km
+    if week1_cap < C.START_VOLUME_FLOOR_KM:
+        return _volume_too_low(
+            f"Volume de départ trop bas ({week1_cap:.1f} km/sem < "
+            f"{C.START_VOLUME_FLOOR_KM:g}).",
+            tmpl,
+            ref_km,
+            week1_cap_km=round(week1_cap, 1),
+        )
+
+    start = ref_km
     climb = {"beginner": 1.55, "intermediate": 1.35, "advanced": 1.22}[tmpl.LEVEL]
-    floor_peak = {
-        "beginner": 24.0 if tmpl.GOAL_KEY != "half" else 28.0,
-        "intermediate": tmpl.TARGET_PEAK_KM * 0.85,
-        "advanced": 58.0 if tmpl.GOAL_KEY != "half" else 65.0,
-    }[tmpl.LEVEL]
-    peak = max(start * climb, floor_peak)
+    peak = start * climb
     peak = min(float(peak), float(tmpl.TARGET_PEAK_KM), float(tmpl.PEAK_WEEKLY_KM_CAP))
-    min_for_goal = {"beginner": 18.0, "intermediate": 18.0, "advanced": 35.0}[tmpl.LEVEL]
-    if start < min_for_goal and tmpl.LEVEL != "beginner":
-        return EngineError(
-            code=ErrorCode.VOLUME_TOO_LOW_FOR_GOAL,
-            message_fr="Volume de départ trop bas pour cet objectif / niveau.",
-            details={"start_weekly_km": start, "level": tmpl.LEVEL},
-        )
+    # P0-4: week 1 (= peak * first volume_frac) must stay <= 1.10 * ref_km.
+    first_frac = float(tmpl.week_specs()[0]["volume_frac"])
+    peak = min(peak, week1_cap / first_frac)
     return float(peak)
 
 
