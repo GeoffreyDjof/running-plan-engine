@@ -1,0 +1,174 @@
+"""P0-7: no hard-coded today/generated_at; same input + as_of_date -> same JSON."""
+
+from __future__ import annotations
+
+import datetime as dt
+import json
+import re
+from pathlib import Path
+
+import pytest
+
+from plan_engine import planner
+from plan_engine.models import EngineError, ErrorCode, Plan, PlanRequest
+
+ROOT = Path(__file__).resolve().parents[1]
+
+
+def _req(name: str) -> PlanRequest:
+    return PlanRequest.model_validate_json((ROOT / "examples" / f"{name}.json").read_text())
+
+
+def _req_with_options_as_of(name: str, as_of: str) -> PlanRequest:
+    data = json.loads((ROOT / "examples" / f"{name}.json").read_text())
+    data["options"]["as_of_date"] = as_of
+    return PlanRequest.model_validate(data)
+
+
+def _json(plan: Plan) -> str:
+    return json.dumps(plan.model_dump(mode="json"), sort_keys=True)
+
+
+def test_same_input_same_as_of_identical_json() -> None:
+    req = _req("intermediate_10k")
+    a = planner.generate_plan(req, as_of_date=dt.date(2026, 9, 20))
+    b = planner.generate_plan(req, as_of_date=dt.date(2026, 9, 20))
+    assert isinstance(a, Plan) and isinstance(b, Plan)
+    assert a.meta.as_of_date == dt.date(2026, 9, 20)
+    assert _json(a) == _json(b)
+
+
+def test_generated_at_derived_from_as_of_not_wall_clock() -> None:
+    req = _req("beginner_half")
+    plan = planner.generate_plan(req, as_of_date=dt.date(2026, 10, 2))
+    assert isinstance(plan, Plan)
+    assert plan.meta.as_of_date == dt.date(2026, 10, 2)
+    assert plan.meta.generated_at == dt.datetime(2026, 10, 2, tzinfo=dt.UTC)
+
+
+def test_as_of_drives_goal_too_soon() -> None:
+    """Race 2026-12-12, 11-week 10k: OK on 09-26, too soon on 10-02."""
+    req = _req("intermediate_10k")
+    ok = planner.generate_plan(req, as_of_date=dt.date(2026, 9, 26))
+    late = planner.generate_plan(req, as_of_date=dt.date(2026, 10, 2))
+    assert isinstance(ok, Plan)
+    assert ok.meta.as_of_date == dt.date(2026, 9, 26)
+    assert isinstance(late, EngineError)
+    assert late.code == ErrorCode.GOAL_TOO_SOON
+    assert late.details["as_of_date"] == "2026-10-02"
+
+
+def test_default_as_of_uses_system_today(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Fallback _system_today() still fills meta.as_of_date (never left None)."""
+    monkeypatch.setattr(planner, "_system_today", lambda: dt.date(2026, 10, 2))
+    req = _req("beginner_half")
+    assert req.options.as_of_date is None
+    assert planner.resolve_as_of_date(req) == dt.date(2026, 10, 2)
+    assert planner.resolve_as_of_date(req, dt.date(2026, 1, 1)) == dt.date(2026, 1, 1)
+    plan = planner.generate_plan(req)
+    assert isinstance(plan, Plan)
+    assert plan.meta.as_of_date == dt.date(2026, 10, 2)
+    assert plan.meta.generated_at == dt.datetime(2026, 10, 2, tzinfo=dt.UTC)
+
+
+def test_options_as_of_date_echoed_and_deterministic() -> None:
+    """options.as_of_date='2026-09-26' -> meta.as_of_date and identical JSON."""
+    req = _req_with_options_as_of("intermediate_10k", "2026-09-26")
+    assert req.options.as_of_date == dt.date(2026, 9, 26)
+    a = planner.generate_plan(req)
+    b = planner.generate_plan(req)
+    assert isinstance(a, Plan) and isinstance(b, Plan)
+    assert a.meta.as_of_date == dt.date(2026, 9, 26)
+    assert b.meta.as_of_date == dt.date(2026, 9, 26)
+    assert _json(a) == _json(b)
+
+
+def test_kwarg_overrides_options_as_of_date() -> None:
+    req = _req_with_options_as_of("beginner_half", "2026-09-26")
+    plan = planner.generate_plan(req, as_of_date=dt.date(2026, 10, 2))
+    assert isinstance(plan, Plan)
+    assert plan.meta.as_of_date == dt.date(2026, 10, 2)
+    assert plan.meta.generated_at == dt.datetime(2026, 10, 2, tzinfo=dt.UTC)
+    assert planner.resolve_as_of_date(req, dt.date(2026, 10, 2)) == dt.date(2026, 10, 2)
+    assert planner.resolve_as_of_date(req) == dt.date(2026, 9, 26)
+
+
+def test_options_as_of_date_beats_system_today(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(planner, "_system_today", lambda: dt.date(2026, 10, 2))
+    req = _req_with_options_as_of("intermediate_10k", "2026-09-20")
+    assert planner.resolve_as_of_date(req) == dt.date(2026, 9, 20)
+
+
+def test_datetime_kwarg_is_coerced_to_date() -> None:
+    """datetime is a date subclass; keep a calendar date for arithmetic + JSON."""
+    req = _req("intermediate_10k")
+    instant = dt.datetime(2026, 9, 20, 15, 30, tzinfo=dt.UTC)
+    assert planner.resolve_as_of_date(req, instant) == dt.date(2026, 9, 20)
+
+
+def test_iso_string_as_of_is_parsed() -> None:
+    req = _req("intermediate_10k")
+    assert planner.resolve_as_of_date(req, "2026-09-26") == dt.date(2026, 9, 26)
+    plan = planner.generate_plan(req, as_of_date="2026-09-26")
+    assert isinstance(plan, Plan)
+    assert plan.meta.as_of_date == dt.date(2026, 9, 26)
+
+
+def test_invalid_as_of_does_not_fall_through_to_today(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(planner, "_system_today", lambda: dt.date(2026, 10, 2))
+    req = _req("intermediate_10k")
+    with pytest.raises(TypeError, match="as_of_date"):
+        planner.resolve_as_of_date(req, 123)  # type: ignore[arg-type]
+    with pytest.raises(ValueError, match="as_of_date"):
+        planner.resolve_as_of_date(req, "not-a-date")
+    assert planner.resolve_as_of_date(req) == dt.date(2026, 10, 2)
+
+
+def test_no_race_date_window_follows_as_of() -> None:
+    data = json.loads((ROOT / "examples" / "beginner_half.json").read_text())
+    data["goal"]["race_date"] = None
+    req = PlanRequest.model_validate(data)
+    friday = planner.generate_plan(req, as_of_date=dt.date(2026, 10, 2))
+    sunday = planner.generate_plan(req, as_of_date=dt.date(2026, 10, 4))
+    monday = planner.generate_plan(req, as_of_date=dt.date(2026, 10, 5))
+    assert isinstance(friday, Plan), friday
+    assert isinstance(sunday, Plan), sunday
+    assert isinstance(monday, Plan), monday
+    assert friday.meta.start_date == dt.date(2026, 10, 5)
+    assert sunday.meta.start_date == dt.date(2026, 10, 5)
+    assert monday.meta.start_date == dt.date(2026, 10, 5)
+    assert monday.meta.as_of_date == dt.date(2026, 10, 5)
+
+
+def test_pinned_conftest_today_fills_generated_at() -> None:
+    req = _req("intermediate_10k")
+    plan = planner.generate_plan(req)
+    assert isinstance(plan, Plan)
+    assert plan.meta.as_of_date == dt.date(2026, 9, 26)
+    assert plan.meta.generated_at == dt.datetime(2026, 9, 26, tzinfo=dt.UTC)
+
+
+_ISO_DATE = re.compile(r"\b20\d{2}-\d{2}-\d{2}\b")
+_DATE_LITERAL = re.compile(r"\b(?:dt\.)?(?:date|datetime)\(\s*20\d{2}\s*,")
+
+
+def test_as_of_date_is_read_from_typed_options_field() -> None:
+    src = (ROOT / "src" / "plan_engine" / "planner.py").read_text()
+    assert "request.options.as_of_date" in src
+    assert "getattr(request.options" not in src
+
+
+
+def test_no_hardcoded_dates_in_plan_engine() -> None:
+    """No hard-coded 20xx-xx-xx or date(20xx, ...) anywhere under src/plan_engine/."""
+    root = ROOT / "src" / "plan_engine"
+    hits: list[str] = []
+    for path in sorted(root.rglob("*.py")):
+        text = path.read_text()
+        rel = path.relative_to(ROOT)
+        for i, line in enumerate(text.splitlines(), start=1):
+            if _ISO_DATE.search(line) or _DATE_LITERAL.search(line):
+                hits.append(f"{rel}:{i}:{line.strip()}")
+    assert hits == []

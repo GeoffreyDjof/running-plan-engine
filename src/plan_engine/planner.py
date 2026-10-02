@@ -38,6 +38,7 @@ from plan_engine.templates import (
     intermediate_5k_4x,
     intermediate_half_4x,
 )
+from plan_engine.validator import ValidationResult, validate_plan
 
 _ENGINE_VERSION = "0.1.0"
 _WEEKDAY_ORDER = (
@@ -63,8 +64,103 @@ _TEMPLATES: tuple[ModuleType, ...] = (
 )
 
 
-def generate_plan(request: PlanRequest) -> PlanResult:
-    """Assemble a deterministic Plan from PlanRequest (no LLM)."""
+def _as_calendar_date(value: object) -> dt.date | None:
+    """Coerce a caller-supplied as_of value to a calendar date.
+
+    ``None`` means “not provided” (fall through). ISO ``YYYY-MM-DD`` strings
+    are accepted. Other types raise — never silently use wall-clock today.
+    """
+    if value is None:
+        return None
+    if isinstance(value, dt.datetime):
+        return value.date()
+    if isinstance(value, dt.date):
+        return value
+    if isinstance(value, str):
+        try:
+            return dt.date.fromisoformat(value)
+        except ValueError as exc:
+            raise ValueError(
+                "as_of_date must be a date or ISO YYYY-MM-DD, "
+                f"got {value!r}"
+            ) from exc
+    raise TypeError(
+        "as_of_date must be a date or ISO YYYY-MM-DD, "
+        f"got {type(value).__name__}"
+    )
+
+
+def resolve_as_of_date(
+    request: PlanRequest, as_of_date: dt.date | str | None = None
+) -> dt.date:
+    """Reference date for "today" (P0-7). Never hard-coded.
+
+    Precedence: explicit ``as_of_date`` argument > ``request.options.as_of_date``
+    (P0-2 / ADR-007) > the machine's current date.
+    Same input + same as_of_date -> byte-identical Plan JSON.
+    """
+    explicit = _as_calendar_date(as_of_date)
+    if explicit is not None:
+        return explicit
+    if request.options.as_of_date is not None:
+        return request.options.as_of_date
+    return _system_today()
+
+
+def _system_today() -> dt.date:
+    """Only wall-clock read in the engine (patched in tests)."""
+    return dt.date.today()  # noqa: DTZ011 - local calendar date is intended
+
+
+def generate_plan(
+    request: PlanRequest, *, as_of_date: dt.date | str | None = None
+) -> PlanResult:
+    """Assemble a deterministic Plan from PlanRequest (no LLM), then validate it.
+
+    Every Plan returned here has passed ``validate_plan`` with the athlete
+    context from the request. A plan that fails any safety rule is never
+    returned: the caller gets a typed EngineError (INJURY_BLOCKS_QUALITY if an
+    injury rule fired, VALIDATION_FAILED otherwise) with rule_id + details.
+    """
+    as_of = resolve_as_of_date(request, as_of_date)
+    result = _assemble_plan(request, as_of)
+    if isinstance(result, EngineError):
+        return result
+    return _validated_or_error(result, request)
+
+
+def _validated_or_error(plan: Plan, request: PlanRequest) -> PlanResult:
+    payload = plan.model_dump(mode="json")
+    payload["_request"] = request.model_dump(mode="json")
+    vr = validate_plan(payload)
+    if vr.ok:
+        return plan
+    return _validation_error(vr)
+
+
+def _validation_error(vr: ValidationResult) -> EngineError:
+    injury = [e for e in vr.errors if e.code == ErrorCode.INJURY_BLOCKS_QUALITY.value]
+    first = injury[0] if injury else vr.errors[0]
+    code = ErrorCode.INJURY_BLOCKS_QUALITY if injury else ErrorCode.VALIDATION_FAILED
+    broken = sorted({e.rule_id for e in vr.errors if e.rule_id})
+    return EngineError(
+        code=code,
+        message_fr=(
+            "Plan refusé par le validateur de sécurité "
+            f"({first.rule_id or 'parse'}): {first.message}"
+        ),
+        details={
+            "rule_id": first.rule_id,
+            "broken_rules": broken,
+            "errors": [e.model_dump(mode="json") for e in vr.errors],
+        },
+    )
+
+
+def _assemble_plan(request: PlanRequest, as_of: dt.date | None = None) -> PlanResult:
+    """Build the raw plan from templates. Not validated — use generate_plan."""
+    if as_of is None:
+        as_of = resolve_as_of_date(request)
     err = _preflight_availability(request)
     if err is not None:
         return err
@@ -86,7 +182,7 @@ def generate_plan(request: PlanRequest) -> PlanResult:
             },
         )
 
-    err = _preflight_race_date(request, tmpl)
+    err = _preflight_race_date(request, tmpl, as_of)
     if err is not None:
         return err
 
@@ -96,7 +192,7 @@ def generate_plan(request: PlanRequest) -> PlanResult:
     pace_zones = paces_result
 
     n_weeks = tmpl.WEEKS
-    start_date, race_date = _schedule_window(request, n_weeks)
+    start_date, race_date = _schedule_window(request, n_weeks, as_of)
 
     peak = _peak_km(request, tmpl)
     if isinstance(peak, EngineError):
@@ -156,6 +252,31 @@ def generate_plan(request: PlanRequest) -> PlanResult:
                     pace_zones=pace_zones,
                 )
                 actual_km = round(sum(s.total_km or 0.0 for s in sessions), 1)
+        elif (
+            not is_deload
+            and spec["phase"] not in ("taper", "race")
+            and last_load_km > 0
+        ):
+            # Low volumes: session rounding/floors can push the *actual*
+            # load→load step past the target. Shrink until within cap.
+            cap_km = last_load_km * (1.0 + C.LOAD_STEP_ACTUAL_MAX)
+            for _ in range(6):
+                if actual_km <= cap_km or actual_km <= 0:
+                    break
+                week_km = round(week_km * (cap_km / actual_km) - 0.1, 1)
+                sessions = _build_week_sessions(
+                    request=request,
+                    tmpl=tmpl,
+                    spec=spec,
+                    week_km=week_km,
+                    start_date=start_date,
+                    race_date=race_date,
+                    long_day=long_day,
+                    quality_day=quality_day,
+                    easy_days=easy_days,
+                    pace_zones=pace_zones,
+                )
+                actual_km = round(sum(s.total_km or 0.0 for s in sessions), 1)
         weeks.append(
             WeekPlan(
                 week_index=int(spec["week_index"]),
@@ -174,12 +295,14 @@ def generate_plan(request: PlanRequest) -> PlanResult:
     return Plan(
         meta=PlanMeta(
             engine_version=_ENGINE_VERSION,
-            generated_at=dt.datetime(2026, 9, 26, 9, 0, 0, tzinfo=dt.timezone.utc),
+            # Deterministic: derived from as_of_date, never from the wall clock.
+            generated_at=dt.datetime.combine(as_of, dt.time(0, 0), tzinfo=dt.UTC),
             method=f"vdot_templates_v1:{tmpl.TEMPLATE_ID}",
             vdot=round(vdot, 2),
             paces_confidence=confidence,  # type: ignore[arg-type]
             start_date=start_date,
             weeks=n_weeks,
+            as_of_date=as_of,
             warnings=[],
         ),
         pace_zones=pace_zones,
@@ -220,11 +343,12 @@ def _preflight_availability(request: PlanRequest) -> EngineError | None:
     return None
 
 
-def _preflight_race_date(request: PlanRequest, tmpl: ModuleType) -> EngineError | None:
+def _preflight_race_date(
+    request: PlanRequest, tmpl: ModuleType, as_of: dt.date
+) -> EngineError | None:
     if request.goal.race_date is None:
         return None
-    today = dt.date(2026, 9, 26)
-    days = (request.goal.race_date - today).days
+    days = (request.goal.race_date - as_of).days
     if days < tmpl.WEEKS * 7 - 3:
         return EngineError(
             code=ErrorCode.GOAL_TOO_SOON,
@@ -232,7 +356,11 @@ def _preflight_race_date(request: PlanRequest, tmpl: ModuleType) -> EngineError 
                 f"Objectif trop proche ({days} jours) pour un plan "
                 f"{tmpl.WEEKS} semaines."
             ),
-            details={"days_to_race": days, "min_weeks": tmpl.WEEKS},
+            details={
+                "days_to_race": days,
+                "min_weeks": tmpl.WEEKS,
+                "as_of_date": as_of.isoformat(),
+            },
         )
     return None
 
@@ -258,44 +386,84 @@ def _resolve_paces(request: PlanRequest):
     return pace_zones_from_vdot(vdot), vdot, "low"
 
 
+def reference_weekly_km(recent_weekly_km: Sequence[float]) -> float | None:
+    """ref_km = min(median of last 4 weeks, max of last 2 weeks). Newest last.
+
+    Using the min avoids starting from an inflated average when volume drops.
+    """
+    recent = [float(x) for x in recent_weekly_km]
+    if not recent:
+        return None
+    last_n = recent[-C.START_REF_WEEKS :]
+    last_2 = recent[-C.START_REF_RECENT_WEEKS :]
+    return min(float(statistics.median(last_n)), max(last_2))
+
+
+def _volume_too_low(
+    message_fr: str, tmpl: ModuleType, ref_km: float | None, **extra: object
+) -> EngineError:
+    return EngineError(
+        code=ErrorCode.VOLUME_TOO_LOW_FOR_GOAL,
+        message_fr=message_fr,
+        details={
+            "ref_weekly_km": ref_km,
+            "level": tmpl.LEVEL,
+            "goal_distance_key": tmpl.GOAL_KEY,
+            **extra,
+        },
+    )
+
+
 def _peak_km(request: PlanRequest, tmpl: ModuleType) -> float | EngineError:
-    recent = list(request.athlete.recent_weekly_km)
-    if recent:
-        start = float(statistics.median(recent))
-    else:
-        start = {"beginner": 18.0, "intermediate": 30.0, "advanced": 50.0}.get(
-            tmpl.LEVEL, 30.0
+    ref_km = reference_weekly_km(request.athlete.recent_weekly_km)
+    min_for_goal = C.RECENT_KM_MIN_FOR_GOAL[tmpl.GOAL_KEY][tmpl.LEVEL]
+    if ref_km is None:
+        return _volume_too_low(
+            "Volume récent inconnu : renseigne tes km des 4 dernières semaines "
+            "pour qu'on parte de ton vrai niveau.",
+            tmpl,
+            ref_km,
+            min_recent_km=min_for_goal,
         )
-    bounds = {
-        "beginner": (12.0, 32.0) if tmpl.GOAL_KEY != "half" else (18.0, 38.0),
-        "intermediate": (22.0, 45.0) if tmpl.GOAL_KEY != "half" else (30.0, 58.0),
-        "advanced": (40.0, 72.0) if tmpl.GOAL_KEY != "half" else (50.0, 85.0),
-    }
-    lo, hi = bounds.get(tmpl.LEVEL, (22.0, 45.0))
-    start = max(lo, min(start, hi))
+    if ref_km < min_for_goal:
+        return _volume_too_low(
+            f"Volume récent trop bas pour cet objectif : {ref_km:g} km/sem, "
+            f"il faut au moins {min_for_goal:g} km/sem réguliers pour un "
+            f"{tmpl.GOAL_KEY} niveau {tmpl.LEVEL}. Vise d'abord une distance plus "
+            "courte ou monte progressivement ton volume.",
+            tmpl,
+            ref_km,
+            min_recent_km=min_for_goal,
+        )
+    week1_cap = C.START_VOLUME_MAX_RATIO * ref_km
+    if week1_cap < C.START_VOLUME_FLOOR_KM:
+        return _volume_too_low(
+            f"Volume de départ trop bas ({week1_cap:.1f} km/sem < "
+            f"{C.START_VOLUME_FLOOR_KM:g}).",
+            tmpl,
+            ref_km,
+            week1_cap_km=round(week1_cap, 1),
+        )
+
+    start = ref_km
     climb = {"beginner": 1.55, "intermediate": 1.35, "advanced": 1.22}[tmpl.LEVEL]
-    floor_peak = {
-        "beginner": 24.0 if tmpl.GOAL_KEY != "half" else 28.0,
-        "intermediate": tmpl.TARGET_PEAK_KM * 0.85,
-        "advanced": 58.0 if tmpl.GOAL_KEY != "half" else 65.0,
-    }[tmpl.LEVEL]
-    peak = max(start * climb, floor_peak)
+    peak = start * climb
     peak = min(float(peak), float(tmpl.TARGET_PEAK_KM), float(tmpl.PEAK_WEEKLY_KM_CAP))
-    min_for_goal = {"beginner": 18.0, "intermediate": 18.0, "advanced": 35.0}[tmpl.LEVEL]
-    if start < min_for_goal and tmpl.LEVEL != "beginner":
-        return EngineError(
-            code=ErrorCode.VOLUME_TOO_LOW_FOR_GOAL,
-            message_fr="Volume de départ trop bas pour cet objectif / niveau.",
-            details={"start_weekly_km": start, "level": tmpl.LEVEL},
-        )
+    # P0-4: week 1 (= peak * first volume_frac) must stay <= 1.10 * ref_km.
+    first_frac = float(tmpl.week_specs()[0]["volume_frac"])
+    peak = min(peak, week1_cap / first_frac)
     return float(peak)
 
 
-def _schedule_window(request: PlanRequest, n_weeks: int) -> tuple[dt.date, dt.date]:
+def _schedule_window(
+    request: PlanRequest, n_weeks: int, as_of: dt.date
+) -> tuple[dt.date, dt.date]:
     if request.goal.race_date is not None:
         race_date = request.goal.race_date
     else:
-        race_date = dt.date(2026, 12, 13)
+        # No race: plan starts the Monday on or after as_of; "race" = last Sunday.
+        first_monday = as_of + dt.timedelta(days=(7 - as_of.weekday()) % 7)
+        race_date = first_monday + dt.timedelta(weeks=n_weeks, days=-1)
     race_wd = race_date.weekday()
     last_week_monday = race_date - dt.timedelta(days=race_wd)
     start_date = last_week_monday - dt.timedelta(weeks=n_weeks - 1)

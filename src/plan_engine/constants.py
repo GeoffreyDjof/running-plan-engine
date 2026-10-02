@@ -8,6 +8,8 @@ TARGET_WEEKLY_INCREASE_MAX = 0.10
 MAX_WEEKLY_INCREASE = 0.10
 MAX_WEEKLY_INCREASE_HARD = 0.12
 NO_CONSECUTIVE_LARGE_INCREASE_THRESHOLD = 0.10
+# Planner guard on *actual* load→load km (slack under R01/R02 for rounding)
+LOAD_STEP_ACTUAL_MAX = 0.09
 DELOAD_FRACTION_MIN = 0.70
 DELOAD_FRACTION_MAX = 0.80
 DELOAD_EVERY_WEEKS_MIN = 3
@@ -115,6 +117,20 @@ DISTANCE_KEY_TO_M = {
     "marathon": 42195.0,
 }
 
+# --- Start volume from real recent km (coaching-rules §3.8, P0-1 / P0-4) ---
+# ref_km = min(median(last START_REF_WEEKS weeks), max(last START_REF_RECENT_WEEKS))
+START_REF_WEEKS = 4
+START_REF_RECENT_WEEKS = 2
+# Week 1 volume <= START_VOLUME_MAX_RATIO * ref_km (same as max weekly increase).
+START_VOLUME_MAX_RATIO = 1.10
+# Below this week-1 cap we refuse; the engine never raises volume to a floor.
+START_VOLUME_FLOOR_KM = 10.0
+# Minimum real recent km/week to accept a goal: RECENT_KM_MIN_FOR_GOAL[distance][level]
+RECENT_KM_MIN_FOR_GOAL = {
+    "5k": {"beginner": 10.0, "intermediate": 16.0, "advanced": 26.0},
+    "10k": {"beginner": 13.0, "intermediate": 20.0, "advanced": 29.0},
+    "half": {"beginner": 15.0, "intermediate": 20.0, "advanced": 29.0},
+}
 
 # --- P0-6 pace ranges (DomainCoach coaching-rules §3.9) ---------------------
 # (fast_side_pct, slow_side_pct) around the central zone pace; wider on the
