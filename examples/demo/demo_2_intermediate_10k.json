@@ -1,0 +1,40 @@
+{
+  "athlete": {
+    "id": "demo-2-int-10k",
+    "age": 32,
+    "sex": "male",
+    "experience_years": 3,
+    "level": "intermediate",
+    "recent_weekly_km": [24, 26, 25, 27],
+    "longest_run_km_last_4w": 14,
+    "availability": [
+      {"weekday": "tue", "max_minutes": 70},
+      {"weekday": "thu", "max_minutes": 75},
+      {"weekday": "sat", "max_minutes": 60},
+      {"weekday": "sun", "max_minutes": 150}
+    ],
+    "constraints": {
+      "injuries": [],
+      "no_track": false,
+      "prefers_time_based": false
+    }
+  },
+  "benchmark": {
+    "distance_km": 10,
+    "time_sec": 3120,
+    "date": "2026-09-13",
+    "is_estimate": false
+  },
+  "goal": {
+    "distance_km": 10,
+    "race_date": "2026-12-20",
+    "target_time_sec": null
+  },
+  "options": {
+    "sessions_per_week": 4,
+    "include_strength": false,
+    "units": "metric",
+    "language": "fr",
+    "as_of_date": "2026-10-02"
+  }
+}
