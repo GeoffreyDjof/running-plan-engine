@@ -12,6 +12,9 @@ dependencies = [
   "pydantic>=2",
 ]
 
+[project.scripts]
+plan-engine = "plan_engine.cli:main"
+
 [project.optional-dependencies]
 dev = [
   "pytest>=8",

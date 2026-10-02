@@ -32,7 +32,7 @@ python -m plan_engine.cli examples/demo/demo_3_advanced_half.json
 # → plan semi confirmé (12 semaines, départ 2026-10-05)
 
 python -m plan_engine.cli examples/demo/demo_4_undertrained_beginner_half.json
-# → refus VOLUME_TOO_LOW_FOR_GOAL (plafond volume P0-4)
+# → refus VOLUME_TOO_LOW_FOR_GOAL (code de sortie 2)
 ```
 
 Repli (exemples historiques, date figée au 2026-09-26) :
@@ -41,7 +41,7 @@ Repli (exemples historiques, date figée au 2026-09-26) :
 python -m plan_engine.cli examples/beginner_10k.json --as-of 2026-09-26
 ```
 
-Affiche le plan en français : allures, semaines avec phase, km et séances.
+Affiche le plan en français : allures en fourchettes (min/km), semaines avec phase, km et séances.
 Après `pip install -e .`, la commande `plan-engine` fait la même chose.
 
 - `--as-of AAAA-MM-JJ` : date de référence (même entrée + même date → même plan).

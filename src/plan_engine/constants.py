@@ -131,3 +131,16 @@ RECENT_KM_MIN_FOR_GOAL = {
     "10k": {"beginner": 13.0, "intermediate": 20.0, "advanced": 29.0},
     "half": {"beginner": 15.0, "intermediate": 20.0, "advanced": 29.0},
 }
+
+# --- P0-6 pace ranges (DomainCoach coaching-rules §3.9) ---------------------
+# (fast_side_pct, slow_side_pct) around the central zone pace; wider on the
+# slow side ("au doute, plus lent"). Bounds rounded to the nearest 5 s, then
+# widened only if needed so the band contains the central pace.
+PACE_RANGE_PCT: dict[str, tuple[float, float]] = {
+    "E": (0.03, 0.08),
+    "M": (0.01, 0.03),
+    "T": (0.01, 0.02),
+    "I": (0.01, 0.02),
+    "R": (0.01, 0.02),
+}
+PACE_RANGE_ROUND_SEC = 5

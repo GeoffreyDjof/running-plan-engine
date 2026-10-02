@@ -1,0 +1,80 @@
+{
+  "athlete": {"level": "intermediate", "injury": {"active": false}, "recent_weekly_km": [11, 10, 12, 11]},
+  "goal": {"distance": "10k", "race_date": "2026-12-15"},
+  "benchmark": {"distance": "5k", "time_seconds": 1500},
+  "availability": {"sessions_per_week": 4, "days": {"mon": {"max_minutes": 60}, "tue": {"max_minutes": 75}, "wed": {"max_minutes": 60}, "thu": {"max_minutes": 70}, "fri": {"max_minutes": 45}, "sat": {"max_minutes": 120}, "sun": {"max_minutes": 60}}},
+  "weeks": [
+    {"week_index": 1, "phase": "base", "is_deload": false, "sessions": [
+        {"date": "2026-09-29", "weekday": "tue", "kind": "easy", "distance_km": 8.5, "total_minutes_est": 55.5},
+        {"date": "2026-09-30", "weekday": "wed", "kind": "easy", "distance_km": 5.6, "total_minutes_est": 43.7},
+        {"date": "2026-10-03", "weekday": "sat", "kind": "long", "distance_km": 9.9, "total_minutes_est": 61.4},
+        {"date": "2026-10-04", "weekday": "sun", "kind": "recovery", "distance_km": 7.0, "total_minutes_est": 45.3}
+    ]},
+    {"week_index": 2, "phase": "base", "is_deload": false, "sessions": [
+        {"date": "2026-10-06", "weekday": "tue", "kind": "easy", "distance_km": 10.0, "total_minutes_est": 60.3},
+        {"date": "2026-10-07", "weekday": "wed", "kind": "tempo", "distance_km": 4.7, "total_minutes_est": 38.9},
+        {"date": "2026-10-10", "weekday": "sat", "kind": "long", "distance_km": 10.8, "total_minutes_est": 66.7},
+        {"date": "2026-10-11", "weekday": "sun", "kind": "recovery", "distance_km": 8.1, "total_minutes_est": 47.4}
+    ]},
+    {"week_index": 3, "phase": "base", "is_deload": false, "sessions": [
+        {"date": "2026-10-13", "weekday": "tue", "kind": "easy", "distance_km": 10.0, "total_minutes_est": 60.3},
+        {"date": "2026-10-14", "weekday": "wed", "kind": "easy", "distance_km": 6.5, "total_minutes_est": 48.9},
+        {"date": "2026-10-17", "weekday": "sat", "kind": "long", "distance_km": 11.5, "total_minutes_est": 71.6},
+        {"date": "2026-10-18", "weekday": "sun", "kind": "recovery", "distance_km": 8.1, "total_minutes_est": 47.4}
+    ]},
+    {"week_index": 4, "phase": "base", "is_deload": true, "sessions": [
+        {"date": "2026-10-20", "weekday": "tue", "kind": "easy", "distance_km": 7.3, "total_minutes_est": 48.2},
+        {"date": "2026-10-21", "weekday": "wed", "kind": "easy", "distance_km": 4.8, "total_minutes_est": 39.4},
+        {"date": "2026-10-24", "weekday": "sat", "kind": "long", "distance_km": 8.5, "total_minutes_est": 52.9},
+        {"date": "2026-10-25", "weekday": "sun", "kind": "recovery", "distance_km": 6.0, "total_minutes_est": 39.2}
+    ]},
+    {"week_index": 5, "phase": "development", "is_deload": false, "sessions": [
+        {"date": "2026-10-27", "weekday": "tue", "kind": "easy", "distance_km": 11.0, "total_minutes_est": 60.3},
+        {"date": "2026-10-28", "weekday": "wed", "kind": "intervals", "distance_km": 5.2, "total_minutes_est": 41.3},
+        {"date": "2026-10-31", "weekday": "sat", "kind": "long", "distance_km": 11.9, "total_minutes_est": 73.7},
+        {"date": "2026-11-01", "weekday": "sun", "kind": "recovery", "distance_km": 9.0, "total_minutes_est": 47.4}
+    ]},
+    {"week_index": 6, "phase": "development", "is_deload": false, "sessions": [
+        {"date": "2026-11-03", "weekday": "tue", "kind": "easy", "distance_km": 11.8, "total_minutes_est": 60.3},
+        {"date": "2026-11-04", "weekday": "wed", "kind": "tempo", "distance_km": 5.5, "total_minutes_est": 43.2},
+        {"date": "2026-11-07", "weekday": "sat", "kind": "long", "distance_km": 12.7, "total_minutes_est": 78.4},
+        {"date": "2026-11-08", "weekday": "sun", "kind": "recovery", "distance_km": 9.6, "total_minutes_est": 47.4}
+    ]},
+    {"week_index": 7, "phase": "development", "is_deload": false, "sessions": [
+        {"date": "2026-11-10", "weekday": "tue", "kind": "easy", "distance_km": 12.5, "total_minutes_est": 60.3},
+        {"date": "2026-11-11", "weekday": "wed", "kind": "intervals", "distance_km": 5.9, "total_minutes_est": 45.6},
+        {"date": "2026-11-14", "weekday": "sat", "kind": "long", "distance_km": 13.5, "total_minutes_est": 83.8},
+        {"date": "2026-11-15", "weekday": "sun", "kind": "recovery", "distance_km": 10.2, "total_minutes_est": 47.4}
+    ]},
+    {"week_index": 8, "phase": "development", "is_deload": true, "sessions": [
+        {"date": "2026-11-17", "weekday": "tue", "kind": "easy", "distance_km": 8.5, "total_minutes_est": 55.5},
+        {"date": "2026-11-18", "weekday": "wed", "kind": "easy", "distance_km": 5.6, "total_minutes_est": 43.7},
+        {"date": "2026-11-21", "weekday": "sat", "kind": "long", "distance_km": 9.9, "total_minutes_est": 61.4},
+        {"date": "2026-11-22", "weekday": "sun", "kind": "recovery", "distance_km": 7.0, "total_minutes_est": 45.3}
+    ]},
+    {"week_index": 9, "phase": "specific", "is_deload": false, "sessions": [
+        {"date": "2026-11-24", "weekday": "tue", "kind": "easy", "distance_km": 12.8, "total_minutes_est": 60.3},
+        {"date": "2026-11-25", "weekday": "wed", "kind": "intervals", "distance_km": 6.0, "total_minutes_est": 46.1},
+        {"date": "2026-11-28", "weekday": "sat", "kind": "long", "distance_km": 13.8, "total_minutes_est": 85.4},
+        {"date": "2026-11-29", "weekday": "sun", "kind": "recovery", "distance_km": 10.4, "total_minutes_est": 47.4}
+    ]},
+    {"week_index": 10, "phase": "specific", "is_deload": false, "sessions": [
+        {"date": "2026-12-01", "weekday": "tue", "kind": "easy", "distance_km": 13.5, "total_minutes_est": 60.3},
+        {"date": "2026-12-02", "weekday": "wed", "kind": "tempo", "distance_km": 6.4, "total_minutes_est": 48.0},
+        {"date": "2026-12-05", "weekday": "sat", "kind": "long", "distance_km": 14.6, "total_minutes_est": 90.8},
+        {"date": "2026-12-06", "weekday": "sun", "kind": "recovery", "distance_km": 11.1, "total_minutes_est": 47.4}
+    ]},
+    {"week_index": 11, "phase": "taper", "is_deload": false, "sessions": [
+        {"date": "2026-12-08", "weekday": "tue", "kind": "easy", "distance_km": 9.7, "total_minutes_est": 58.4},
+        {"date": "2026-12-09", "weekday": "wed", "kind": "tempo", "distance_km": 5.2, "total_minutes_est": 41.3},
+        {"date": "2026-12-12", "weekday": "sat", "kind": "long", "distance_km": 9.8, "total_minutes_est": 60.9},
+        {"date": "2026-12-13", "weekday": "sun", "kind": "recovery", "distance_km": 8.0, "total_minutes_est": 51.7}
+    ]},
+    {"week_index": 12, "phase": "race", "is_deload": false, "sessions": [
+        {"date": "2026-12-14", "weekday": "mon", "kind": "easy", "distance_km": 4.3, "total_minutes_est": 25.8},
+        {"date": "2026-12-15", "weekday": "tue", "kind": "easy", "distance_km": 8.6, "total_minutes_est": 43.1},
+        {"date": "2026-12-19", "weekday": "sat", "kind": "recovery", "distance_km": 2.6, "total_minutes_est": 17.2}
+    ]}
+  ],
+  "warnings": []
+}

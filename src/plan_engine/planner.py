@@ -11,6 +11,7 @@ from types import ModuleType
 from typing import Sequence
 
 from plan_engine import constants as C
+from plan_engine.labels import goal_key_fr, km_fr, level_fr
 from plan_engine.models import (
     DayAvailability,
     EngineError,
@@ -427,9 +428,10 @@ def _peak_km(request: PlanRequest, tmpl: ModuleType) -> float | EngineError:
         )
     if ref_km < min_for_goal:
         return _volume_too_low(
-            f"Volume récent trop bas pour cet objectif : {ref_km:g} km/sem, "
-            f"il faut au moins {min_for_goal:g} km/sem réguliers pour un "
-            f"{tmpl.GOAL_KEY} niveau {tmpl.LEVEL}. Vise d'abord une distance plus "
+            f"Volume récent trop bas pour cet objectif : {km_fr(ref_km)} km/sem, "
+            f"il faut au moins {km_fr(min_for_goal)} km/sem réguliers pour un "
+            f"{goal_key_fr(tmpl.GOAL_KEY)} niveau {level_fr(tmpl.LEVEL)}. "
+            "Vise d'abord une distance plus "
             "courte ou monte progressivement ton volume.",
             tmpl,
             ref_km,
@@ -438,8 +440,9 @@ def _peak_km(request: PlanRequest, tmpl: ModuleType) -> float | EngineError:
     week1_cap = C.START_VOLUME_MAX_RATIO * ref_km
     if week1_cap < C.START_VOLUME_FLOOR_KM:
         return _volume_too_low(
-            f"Volume de départ trop bas ({week1_cap:.1f} km/sem < "
-            f"{C.START_VOLUME_FLOOR_KM:g}).",
+            f"Volume de départ trop bas : {km_fr(week1_cap, 1)} km/sem, il faut "
+            f"au moins {km_fr(C.START_VOLUME_FLOOR_KM)} km/sem réguliers pour "
+            "démarrer un plan.",
             tmpl,
             ref_km,
             week1_cap_km=round(week1_cap, 1),
