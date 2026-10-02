@@ -170,6 +170,14 @@ class Options(BaseModel):
     include_strength: bool = False
     units: Literal["metric"] = "metric"
     language: Literal["fr"] = "fr"
+    as_of_date: dt.date | None = Field(
+        default=None,
+        description=(
+            "Reference date the plan is computed from (days-to-race, week dates). "
+            "Same input + same as_of_date must yield an identical JSON plan. "
+            "Planner wiring in P0-7."
+        ),
+    )
 
 
 class PlanRequest(BaseModel):
@@ -188,11 +196,39 @@ class PlanRequest(BaseModel):
 # ---------------------------------------------------------------------------
 
 
+class PaceRange(BaseModel):
+    """Inclusive pace band in sec/km. min is the faster end, max the slower end."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    min_sec_per_km: int = Field(gt=0, description="Faster end (fewer seconds per km)")
+    max_sec_per_km: int = Field(gt=0, description="Slower end (more seconds per km)")
+
+    @model_validator(mode="after")
+    def _min_faster_than_max(self) -> PaceRange:
+        if self.min_sec_per_km >= self.max_sec_per_km:
+            raise ValueError("min_sec_per_km must be < max_sec_per_km (min is the faster end)")
+        return self
+
+
 class PaceZoneDetail(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    pace_sec_per_km: int = Field(gt=0, description="Seconds per km (E/M/T/I/R)")
+    pace_sec_per_km: int = Field(gt=0, description="Central zone pace, seconds per km (E/M/T/I/R)")
     label: str
+    range: PaceRange | None = Field(
+        default=None,
+        description="Optional inclusive band around the central pace; filled by planner in P0-6",
+    )
+
+    @model_validator(mode="after")
+    def _center_inside_range(self) -> PaceZoneDetail:
+        band = self.range
+        if band is not None and not (
+            band.min_sec_per_km <= self.pace_sec_per_km <= band.max_sec_per_km
+        ):
+            raise ValueError("pace_sec_per_km must be within range [min_sec_per_km, max_sec_per_km]")
+        return self
 
 
 class PaceZones(BaseModel):
@@ -243,17 +279,36 @@ class WeekPlan(BaseModel):
     sessions: list[Session] = Field(default_factory=list)
 
 
+class PlanWarning(BaseModel):
+    """Non-blocking warning. Blocking issues stay EngineError."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    code: str = Field(description="Stable English id, e.g. START_VOLUME_CAPPED")
+    message_fr: str
+    details: dict[str, Any] = Field(default_factory=dict)
+
+
 class PlanMeta(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     engine_version: str
-    generated_at: dt.datetime
+    generated_at: dt.datetime = Field(
+        description=(
+            "Deterministic derived timestamp for the computation, not wall-clock. "
+            "Same input + same as_of_date must yield the same value (planner wiring in P0-7)."
+        ),
+    )
     method: str = "vdot_templates_v1"
     vdot: float = Field(gt=0)
     paces_confidence: PacesConfidence
     start_date: dt.date
     weeks: int = Field(ge=1)
-    warnings: list[str] = Field(default_factory=list)
+    as_of_date: dt.date | None = Field(
+        default=None,
+        description="Reference date used to compute the plan (echo of options.as_of_date).",
+    )
+    warnings: list[PlanWarning] = Field(default_factory=list)
 
 
 class Plan(BaseModel):

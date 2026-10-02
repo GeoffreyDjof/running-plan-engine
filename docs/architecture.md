@@ -1,6 +1,6 @@
 # Architecture — running-plan-engine
 
-Version : 2026-09-26 (phase 0)  
+Version : 2026-10-02 (phase 0 + contrat P0-2)  
 Audience : équipe agents + porteur humain  
 Source de vérité runtime : **schémas Pydantic / JSON** (`src/plan_engine/models.py`), pas le Markdown.
 
@@ -39,9 +39,13 @@ PlanRequest
 
 ## 4. Contrat imbriqué (rappel §5)
 
-**Input `PlanRequest`** : `athlete` (profil, `recent_weekly_km` 4 sem. plus récente en dernier, `availability`, `constraints.injuries`) + `benchmark?` (`distance_km`, `time_sec`) + `goal` (`distance_km`, `race_date?`) + `options` (`sessions_per_week`, `units: metric`, `language: fr`).
+**Input `PlanRequest`** : `athlete` (profil, `recent_weekly_km` 4 sem. plus récente en dernier, `availability`, `constraints.injuries`) + `benchmark?` (`distance_km`, `time_sec`) + `goal` (`distance_km`, `race_date?`) + `options` (`sessions_per_week`, `units: metric`, `language: fr`, `as_of_date?`).
 
-**Output `Plan`** : `meta` (version, VDOT, `paces_confidence`, warnings…) + `pace_zones` (E|M|T|I|R) + `plan` (semaines → séances avec `structure` WU / corps / CD).
+`options.as_of_date` est la date de référence du calcul (jours-à-course, dates de semaine). **Même input + même `as_of_date` → même JSON.** Absent = le planner choisira sa date de repli (aujourd’hui hardcodé jusqu’à P0-7).
+
+**Output `Plan`** : `meta` (version, VDOT, `paces_confidence`, `as_of_date?`, `generated_at` dérivé/déterministe, `warnings: list[PlanWarning]`) + `pace_zones` (E|M|T|I|R, pace central + `range?`) + `plan` (semaines → séances avec `structure` WU / corps / CD).
+
+`PlanWarning` : `code` (id anglais stable, ex. `START_VOLUME_CAPPED`), `message_fr`, `details` (défaut `{}`). Non bloquant ; un refus reste `EngineError`.
 
 ## 5. Erreurs métier typées (`ErrorCode`)
 
@@ -77,7 +81,10 @@ Aligné handoff §5.2 — **pas d’alias** :
 |------|-----------|-------------------|
 | Volume séance | `Session.total_km`, `Session.total_minutes_est` | `km`, `min`, `distance_km` sur Session |
 | Semaines | `Plan.plan: list[WeekPlan]` | clé top-level `weeks` (sauf `meta.weeks: int`) |
-| Allures | `PaceZones.E…R` → `PaceZoneDetail.pace_sec_per_km` + `label` | int brut par zone |
+| Allures | `PaceZones.E…R` → `PaceZoneDetail.pace_sec_per_km` + `label` + `range?` (`PaceRange.min/max_sec_per_km`) | int brut par zone |
+| Date de référence | `options.as_of_date?` → echo `meta.as_of_date?` | date système / today hardcodé dans le contrat |
+| Horodatage | `meta.generated_at` dérivé / déterministe (pas wall-clock) | `datetime.now()` |
+| Warnings | `meta.warnings: list[PlanWarning]` (`code`, `message_fr`, `details`) | `list[str]` |
 | Structure | `Session.structure[]` avec `block` / `duration_min` / `distance_km` / `zone` | — |
 
 Le validateur lit **`total_km`** (pas `distance_km` sur Session). `distance_km` n’existe que sur `StructureBlock`.
