@@ -78,15 +78,14 @@ def resolve_as_of_date(
     """Reference date for "today" (P0-7). Never hard-coded.
 
     Precedence: explicit ``as_of_date`` argument > ``request.options.as_of_date``
-    (contract P0-2, read defensively) > the machine's current date.
+    (P0-2 / ADR-007) > the machine's current date.
     Same input + same as_of_date -> byte-identical Plan JSON.
     """
     explicit = _as_calendar_date(as_of_date)
     if explicit is not None:
         return explicit
-    from_options = _as_calendar_date(getattr(request.options, "as_of_date", None))
-    if from_options is not None:
-        return from_options
+    if request.options.as_of_date is not None:
+        return request.options.as_of_date
     return _system_today()
 
 
@@ -216,6 +215,7 @@ def generate_plan(
             paces_confidence=confidence,  # type: ignore[arg-type]
             start_date=start_date,
             weeks=n_weeks,
+            as_of_date=as_of,
             warnings=[],
         ),
         pace_zones=pace_zones,
