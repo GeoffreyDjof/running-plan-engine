@@ -42,7 +42,7 @@ def test_unsafe_assembled_plan_is_refused(monkeypatch: pytest.MonkeyPatch) -> No
     for s in week.sessions:
         if s.total_km:
             s.total_km = round(s.total_km * 1.6, 1)
-    monkeypatch.setattr(planner, "_assemble_plan", lambda _r: raw)
+    monkeypatch.setattr(planner, "_assemble_plan", lambda _r, *_a, **_k: raw)
 
     out = planner.generate_plan(req)
     assert isinstance(out, EngineError)

@@ -64,7 +64,57 @@ _TEMPLATES: tuple[ModuleType, ...] = (
 )
 
 
-def generate_plan(request: PlanRequest) -> PlanResult:
+def _as_calendar_date(value: object) -> dt.date | None:
+    """Coerce a caller-supplied as_of value to a calendar date.
+
+    ``None`` means “not provided” (fall through). ISO ``YYYY-MM-DD`` strings
+    are accepted. Other types raise — never silently use wall-clock today.
+    """
+    if value is None:
+        return None
+    if isinstance(value, dt.datetime):
+        return value.date()
+    if isinstance(value, dt.date):
+        return value
+    if isinstance(value, str):
+        try:
+            return dt.date.fromisoformat(value)
+        except ValueError as exc:
+            raise ValueError(
+                "as_of_date must be a date or ISO YYYY-MM-DD, "
+                f"got {value!r}"
+            ) from exc
+    raise TypeError(
+        "as_of_date must be a date or ISO YYYY-MM-DD, "
+        f"got {type(value).__name__}"
+    )
+
+
+def resolve_as_of_date(
+    request: PlanRequest, as_of_date: dt.date | str | None = None
+) -> dt.date:
+    """Reference date for "today" (P0-7). Never hard-coded.
+
+    Precedence: explicit ``as_of_date`` argument > ``request.options.as_of_date``
+    (P0-2 / ADR-007) > the machine's current date.
+    Same input + same as_of_date -> byte-identical Plan JSON.
+    """
+    explicit = _as_calendar_date(as_of_date)
+    if explicit is not None:
+        return explicit
+    if request.options.as_of_date is not None:
+        return request.options.as_of_date
+    return _system_today()
+
+
+def _system_today() -> dt.date:
+    """Only wall-clock read in the engine (patched in tests)."""
+    return dt.date.today()  # noqa: DTZ011 - local calendar date is intended
+
+
+def generate_plan(
+    request: PlanRequest, *, as_of_date: dt.date | str | None = None
+) -> PlanResult:
     """Assemble a deterministic Plan from PlanRequest (no LLM), then validate it.
 
     Every Plan returned here has passed ``validate_plan`` with the athlete
@@ -72,7 +122,8 @@ def generate_plan(request: PlanRequest) -> PlanResult:
     returned: the caller gets a typed EngineError (INJURY_BLOCKS_QUALITY if an
     injury rule fired, VALIDATION_FAILED otherwise) with rule_id + details.
     """
-    result = _assemble_plan(request)
+    as_of = resolve_as_of_date(request, as_of_date)
+    result = _assemble_plan(request, as_of)
     if isinstance(result, EngineError):
         return result
     return _validated_or_error(result, request)
@@ -106,8 +157,10 @@ def _validation_error(vr: ValidationResult) -> EngineError:
     )
 
 
-def _assemble_plan(request: PlanRequest) -> PlanResult:
+def _assemble_plan(request: PlanRequest, as_of: dt.date | None = None) -> PlanResult:
     """Build the raw plan from templates. Not validated — use generate_plan."""
+    if as_of is None:
+        as_of = resolve_as_of_date(request)
     err = _preflight_availability(request)
     if err is not None:
         return err
@@ -129,7 +182,7 @@ def _assemble_plan(request: PlanRequest) -> PlanResult:
             },
         )
 
-    err = _preflight_race_date(request, tmpl)
+    err = _preflight_race_date(request, tmpl, as_of)
     if err is not None:
         return err
 
@@ -139,7 +192,7 @@ def _assemble_plan(request: PlanRequest) -> PlanResult:
     pace_zones = paces_result
 
     n_weeks = tmpl.WEEKS
-    start_date, race_date = _schedule_window(request, n_weeks)
+    start_date, race_date = _schedule_window(request, n_weeks, as_of)
 
     peak = _peak_km(request, tmpl)
     if isinstance(peak, EngineError):
@@ -217,12 +270,14 @@ def _assemble_plan(request: PlanRequest) -> PlanResult:
     return Plan(
         meta=PlanMeta(
             engine_version=_ENGINE_VERSION,
-            generated_at=dt.datetime(2026, 9, 26, 9, 0, 0, tzinfo=dt.timezone.utc),
+            # Deterministic: derived from as_of_date, never from the wall clock.
+            generated_at=dt.datetime.combine(as_of, dt.time(0, 0), tzinfo=dt.UTC),
             method=f"vdot_templates_v1:{tmpl.TEMPLATE_ID}",
             vdot=round(vdot, 2),
             paces_confidence=confidence,  # type: ignore[arg-type]
             start_date=start_date,
             weeks=n_weeks,
+            as_of_date=as_of,
             warnings=[],
         ),
         pace_zones=pace_zones,
@@ -263,11 +318,12 @@ def _preflight_availability(request: PlanRequest) -> EngineError | None:
     return None
 
 
-def _preflight_race_date(request: PlanRequest, tmpl: ModuleType) -> EngineError | None:
+def _preflight_race_date(
+    request: PlanRequest, tmpl: ModuleType, as_of: dt.date
+) -> EngineError | None:
     if request.goal.race_date is None:
         return None
-    today = dt.date(2026, 9, 26)
-    days = (request.goal.race_date - today).days
+    days = (request.goal.race_date - as_of).days
     if days < tmpl.WEEKS * 7 - 3:
         return EngineError(
             code=ErrorCode.GOAL_TOO_SOON,
@@ -275,7 +331,11 @@ def _preflight_race_date(request: PlanRequest, tmpl: ModuleType) -> EngineError 
                 f"Objectif trop proche ({days} jours) pour un plan "
                 f"{tmpl.WEEKS} semaines."
             ),
-            details={"days_to_race": days, "min_weeks": tmpl.WEEKS},
+            details={
+                "days_to_race": days,
+                "min_weeks": tmpl.WEEKS,
+                "as_of_date": as_of.isoformat(),
+            },
         )
     return None
 
@@ -334,11 +394,15 @@ def _peak_km(request: PlanRequest, tmpl: ModuleType) -> float | EngineError:
     return float(peak)
 
 
-def _schedule_window(request: PlanRequest, n_weeks: int) -> tuple[dt.date, dt.date]:
+def _schedule_window(
+    request: PlanRequest, n_weeks: int, as_of: dt.date
+) -> tuple[dt.date, dt.date]:
     if request.goal.race_date is not None:
         race_date = request.goal.race_date
     else:
-        race_date = dt.date(2026, 12, 13)
+        # No race: plan starts the Monday on or after as_of; "race" = last Sunday.
+        first_monday = as_of + dt.timedelta(days=(7 - as_of.weekday()) % 7)
+        race_date = first_monday + dt.timedelta(weeks=n_weeks, days=-1)
     race_wd = race_date.weekday()
     last_week_monday = race_date - dt.timedelta(days=race_wd)
     start_date = last_week_monday - dt.timedelta(weeks=n_weeks - 1)
