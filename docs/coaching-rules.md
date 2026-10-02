@@ -1,6 +1,6 @@
 # Règles de coaching — running-plan-engine
 
-Version: 2026-09-26  
+Version: 2026-10-02 (P0-1 : volume de départ, faisabilité, fourchettes d’allure)  
 Source: `docs/handoff.md` (extrait phase 0–1) + arbitrage DomainCoach  
 Langue: FR métier / EN constantes & codes  
 Principe directeur: **sécurité > personnalisation** ; en cas de doute, plus conservateur.
@@ -69,7 +69,7 @@ Exception documentée à `MAX_WEEKLY_INCREASE_HARD` (hors ADR-005) : uniquement 
 
 **R04** : toute semaine `is_deload=true` doit être dans `[DELOAD_FRACTION_MIN, DELOAD_FRACTION_MAX]` du pic de charge récent (sinon `VALIDATION_FAILED` / rule_id deload).
 
-Volume de départ planner : `start_weekly_km = median(recent_weekly_km)` borné par les plafonds §4 et par `VOLUME_TOO_LOW_FOR_GOAL` si trop bas pour l’objectif.
+Volume de départ planner : **remplacé par §3.8** (2026-10-02). Plus aucune remontée forcée à un minimum par niveau.
 
 ### 3.2 Polarisation / intensité
 
@@ -164,6 +164,117 @@ Owner d’implémentation + fixtures numériques : EngineMoteur (`docs/paces-vdo
 
 Allures des séances **uniquement** depuis `pace_zones` (secondes/km). Jamais de pace libre hors zones.
 
+
+### 3.8 Volume de départ et faisabilité de l’objectif (P0-1, 2026-10-02)
+
+Pourquoi : les coureurs surestiment leur niveau, et l’ancien planner remontait le départ à un minimum par niveau (un coureur à 11 km/sem pouvait démarrer vers ~31 km/sem, soit près de ×3). La règle devient : **on part du km réel, jamais d’un minimum théorique**. Si le km réel ne permet pas d’atteindre l’objectif en sécurité, on refuse avec un message clair au lieu de gonfler le plan.
+
+| Constante | Valeur | Sens |
+|-----------|--------|------|
+| `START_VOLUME_MAX_RATIO` | `1.10` | Semaine 1 ≤ 110 % du km de référence récent |
+| `START_VOLUME_FLOOR_KM` | `10.0` | Plancher : km de référence < 10 → refus, **jamais** de remontée à 10 |
+| `START_REFERENCE_WINDOW_WEEKS` | `4` | Fenêtre lue dans `recent_weekly_km` (les 4 dernières valeurs, la plus récente en dernier) |
+| `START_RECENT_MIN_VALUES_NO_WARNING` | `4` | Moins de 4 valeurs → plan possible mais warning FR dans `meta.warnings` |
+
+**Km de référence** (déterministe) :
+
+```
+w = recent_weekly_km[-4:]
+ref_km = min( median(w), max(w[-2:]) )      # si len(w) == 1 : ref_km = w[0]
+week1_cap_km = round(START_VOLUME_MAX_RATIO * ref_km, 1)
+```
+
+Justification :
+- `1.10` = la même hausse max que d’une semaine de charge à l’autre (`MAX_WEEKLY_INCREASE`). La semaine 1 est simplement « la semaine suivante » du vécu réel du coureur, donc même règle de progression.
+- `median` sur 4 semaines : une semaine exceptionnelle (sortie club, vacances) ne fixe pas le départ.
+- `min(…, max(2 dernières))` : si le volume baisse (coupure, gêne, fatigue), on repart du récent, pas d’une moyenne gonflée par l’ancien. `max` des 2 dernières plutôt que la dernière seule pour ne pas punir une semaine de récup isolée.
+- Plancher `10 km` : en dessous, 3 séances font < 3,5 km chacune ; c’est un programme course-marche de reprise, hors scope v1.
+
+**Planner** (formule, implémentation EngineMoteur) :
+
+```
+week1_km = min( week1_cap_km, template.week1_volume_frac * template.TARGET_PEAK_KM )
+peak_km  = min( week1_km / template.week1_volume_frac, TARGET_PEAK_KM, PEAK_WEEKLY_KM_CAP )
+```
+
+Les autres semaines suivent les `volume_frac` du template (R01/R02/R04 inchangées). Aucun `max(lo, …)` ni `floor_peak` ne doit relever le volume.
+
+**Faisabilité → `VOLUME_TOO_LOW_FOR_GOAL`** (contrôle avant génération) :
+
+Refus si `recent_weekly_km` est vide, ou si `ref_km < START_VOLUME_FLOOR_KM`, ou si `ref_km < RECENT_KM_MIN_FOR_GOAL[level][distance]` :
+
+| `RECENT_KM_MIN_FOR_GOAL` (km/sem réels) | 5k | 10k | half |
+|------------------------------------------|----|-----|------|
+| beginner | `10` | `13` | `15` |
+| intermediate | `16` | `20` | `20` |
+| advanced | `26` | `29` | `29` |
+
+Marathon : hors lot P0 (P2), pas de seuil publié.
+
+Dérivation (pour relire les chiffres) : pic minimal crédible pour finir l’objectif en sécurité `PEAK_MIN_FOR_GOAL_KM`, divisé par ce que le template peut atteindre depuis le km réel (`START_VOLUME_MAX_RATIO / week1_volume_frac` = 1,10/0,70 ≈ 1,57 pour 5k/10k, 1,10/0,68 ≈ 1,62 pour 10k beginner, 1,10/0,62 ≈ 1,77 pour le semi), arrondi au km supérieur.
+
+| `PEAK_MIN_FOR_GOAL_KM` (justification, non contrôlé directement) | 5k | 10k | half |
+|-------------------------------------------------------------------|----|-----|------|
+| beginner | 15 | 20 | 25 |
+| intermediate | 25 | 30 | 35 |
+| advanced | 40 | 45 | 50 |
+
+Un « advanced » déclaré qui court 20 km/sem est refusé sur son niveau : le message propose le niveau en dessous. On ne rétrograde pas automatiquement (décision humaine du coureur).
+
+Messages FR (`message_fr`, `details` en EN) :
+- vide : « Indique tes km des 4 dernières semaines : sans ce chiffre, on ne peut pas te proposer un départ sûr. » → `details.reason="recent_weekly_km_missing"`
+- trop bas : « Avec environ {ref_km} km/sem en ce moment, un {distance} au niveau {level} n’est pas sûr. Il faut courir au moins {min} km/sem de façon régulière, ou viser une distance plus courte. » → `details={"reason":"recent_volume_below_goal_min","ref_km":…,"required_km":…,"level":…,"distance":…}`
+
+**Cas chiffrés (dont 11 km/sem → semi)** :
+
+| Cas | `recent_weekly_km` | `ref_km` | Résultat attendu |
+|-----|--------------------|----------|------------------|
+| C1 beginner semi | `[11, 10, 12, 11]` | `min(11, 12)` = 11 | **`VOLUME_TOO_LOW_FOR_GOAL`** (11 < 15). Avant : départ ~31 km/sem. |
+| C2 même coureur, 10k | `[11, 10, 12, 11]` | 11 | **`VOLUME_TOO_LOW_FOR_GOAL`** (11 < 13) |
+| C3 même coureur, 5k | `[11, 10, 12, 11]` | 11 | PASS : S1 ≤ 12,1 km ; pic = 12,1/0,70 ≈ 17,3 km (≥ 15) |
+| C4 beginner semi (example actuel) | `[22, 24, 23, 25]` | `min(23,5, 25)` = 23,5 | PASS : S1 ≤ 25,9 km = min(25,9 ; 0,62×38 = 23,6) → S1 23,6, pic 38 |
+| C5 tendance à la baisse (edge injury) | `[30, 28, 25, 22]` | `min(26,5, 25)` = 25 | S1 ≤ 27,5 km (et non 29,2 via la médiane seule) |
+| C6 advanced 10k sous-entraîné | `[20, 22, 21, 22]` | 21,5 | **`VOLUME_TOO_LOW_FOR_GOAL`** (21,5 < 29), message propose « intermediate » |
+| C7 plancher | `[8, 9, 7, 9]` | 8,5 | **`VOLUME_TOO_LOW_FOR_GOAL`** (< 10), même pour un 5k beginner |
+| C8 2 valeurs seulement | `[18, 20]` | `min(19, 20)` = 19 | 10k beginner PASS + warning FR « moins de 4 semaines renseignées » |
+
+Les 9 examples actuels (`examples/*.json`, hors edge) passent tous les seuils ci-dessus.
+
+**Validateur (P0-5, EngineValid)** : `week[1].target_km > week1_cap_km + 0.1` (tolérance d’arrondi) → `VALIDATION_FAILED`, rule_id proposé `R21` / `START_VOLUME_ABOVE_RECENT` (EngineValid fixe l’id final ; R16 et R18 sont déjà pris dans §5). Le validateur doit recevoir `athlete.recent_weekly_km`.
+
+### 3.9 Fourchettes d’allure par zone (P0-1, 2026-10-02)
+
+Pourquoi : une allure unique (« 5:21/km ») est irréaliste au quotidien (terrain, vent, fatigue). On donne une fourchette autour de l’allure de zone Daniels (`pace_zones`, valeur centrale inchangée). La fourchette s’étend **plus du côté lent que du côté rapide** : au doute, plus lent.
+
+| Constante | Côté rapide (`min`) | Côté lent (`max`) | Justification |
+|-----------|---------------------|-------------------|---------------|
+| `PACE_RANGE_E` | `-3 %` | `+8 %` | Daniels donne l’endurance comme une plage large (~59–74 % VO2max) ; trop lent n’est jamais un risque en E |
+| `PACE_RANGE_M` | `-1 %` | `+3 %` | Allure marathon = allure soutenue mais contrôlée |
+| `PACE_RANGE_T` | `-1 %` | `+2 %` | Le seuil est précis ; l’erreur classique est d’aller trop vite |
+| `PACE_RANGE_I` | `-1 %` | `+2 %` | Idem, effort VO2max court |
+| `PACE_RANGE_R` | `-1 %` | `+2 %` | Vitesse ; la forme prime sur le chrono |
+| `PACE_RANGE_ROUND_SEC` | `5` | | Affichage lisible (« 6:15–6:40 ») |
+
+Calcul (en secondes/km, `p` = allure de zone) :
+
+```
+min = 5 * round(p * (1 - fast_pct) / 5)
+max = 5 * round(p * (1 + slow_pct) / 5)
+min = min(min, p) ; max = max(max, p)      # p reste toujours dans la fourchette
+assert min < max
+```
+
+`round` = arrondi au plus proche, `.5` vers le haut (`ROUND_HALF_UP`), pas l’arrondi bancaire Python, pour rester déterministe et lisible. Même règle pour `week1_cap_km` (0,1 km).
+
+Exemples (zones du moteur actuel) :
+
+| VDOT | E | M | T | I | R |
+|------|---|---|---|---|---|
+| 35 (≈ débutant) | 7:00–7:45 (`p`=7:12) | 5:55–6:10 | 5:35–5:45 | 5:10–5:20 | 4:50–4:55 |
+| 51 (ancre 5k 20:00) | 5:10–5:45 (`p`=5:21) | 4:25–4:35 | 4:10–4:15 | 3:50–3:55 | 3:30–3:40 |
+
+Contrôles validateur (P0-6, EngineValid) : `min_sec_per_km < max_sec_per_km` ; l’allure de zone `p` ∈ [min, max] ; fourchette de séance ⊂ fourchette de sa zone ; pas de chevauchement T/I ni I/R (ordre des zones conservé). Fail → `VALIDATION_FAILED`, rule_id proposé `R22` / `PACE_RANGE_INVALID`.
+
 ---
 
 ## 4. Plafonds pic volume (km/semaine)
@@ -188,7 +299,7 @@ Fourchettes handoff (référence, bas → haut) :
 | Semi | 35–45 | 45–65 | 60–90 |
 | Marathon | 40–50 | 55–75 | 70–110 |
 
-`PEAK_WEEKLY_KM_MIN` (bas de fourchette) sert au warning / `VOLUME_TOO_LOW_FOR_GOAL` si le volume de départ ne peut pas monter raisonnablement vers une préparation crédible avant la date.
+Le bas de fourchette handoff reste indicatif. Le refus `VOLUME_TOO_LOW_FOR_GOAL` se décide uniquement avec `RECENT_KM_MIN_FOR_GOAL` (§3.8).
 
 **À confirmer humain** : si les plafonds asso sont plus bas que ce tableau, abaisser les `PEAK_WEEKLY_KM_MAX_*` (ne pas supprimer les catégories distance×level).
 
@@ -219,7 +330,9 @@ Chaque règle a un **code** d’échec attendu.
 | R17 | Benchmark absurde | `BENCHMARK_IMPLAUSIBLE` |
 | R18 | `sessions_per_week` incompatible avec `availability` | `INSUFFICIENT_AVAILABILITY` |
 | R19 | Objectif trop proche pour construire un plan sûr | `GOAL_TOO_SOON` |
-| R20 | Volume de départ trop bas pour l’objectif | `VOLUME_TOO_LOW_FOR_GOAL` |
+| R20 | Volume de départ trop bas pour l’objectif (§3.8 : `ref_km` < `RECENT_KM_MIN_FOR_GOAL` ou < plancher, ou `recent_weekly_km` vide) | `VOLUME_TOO_LOW_FOR_GOAL` |
+| R21 | Semaine 1 > `START_VOLUME_MAX_RATIO × ref_km` (+0,1 km d’arrondi) (§3.8) | `VALIDATION_FAILED` |
+| R22 | Fourchette d’allure invalide : min ≥ max, zone hors fourchette, ou chevauchement de zones (§3.9) | `VALIDATION_FAILED` |
 
 ---
 
@@ -239,6 +352,8 @@ EngineValid colle les seuils **1:1** sur ces constantes.
 | P05 | Deload à 75 % du pic après 3 sem de charge (+8 %, +9 %, +7 %) | PASS |
 | P06 | Injury active : easy time-based + strength courte, long ≤ 30 %, warning présent | PASS |
 | P07 | Advanced 5k, 1× intervals + 1× tempo max, jours non consécutifs, easy ≥ 75 % | PASS |
+| P08 | Beginner 5k, `recent_weekly_km=[11,10,12,11]`, S1 = 12,1 km | PASS (R21 limite) |
+| P09 | Fourchettes VDOT 51 du §3.9 | PASS (R22) |
 
 ### 6.2 Doivent ÉCHOUER (`unsafe_*.json`)
 
@@ -258,6 +373,9 @@ EngineValid colle les seuils **1:1** sur ces constantes.
 | F12 | `unsafe_consecutive_large_increases.json` | +11 % puis +9 % | `VALIDATION_FAILED` (R02) |
 | F13 | `unsafe_no_deload.json` | 5 sem charge sans deload | `VALIDATION_FAILED` (R03) |
 | F14 | `unsafe_benchmark_implausible.json` | 5k en 8:00 | `BENCHMARK_IMPLAUSIBLE` (R17) |
+| F15 | `unsafe_start_volume_above_recent.json` | `recent_weekly_km=[11,10,12,11]`, S1 = 31 km | `VALIDATION_FAILED` (R21) |
+| F16 | `unsafe_pace_range_inverted.json` | E min 6:40 > max 6:15 | `VALIDATION_FAILED` (R22) |
+| F17 | (input, planner) beginner semi, `recent_weekly_km=[11,10,12,11]` | refus avant génération | `VOLUME_TOO_LOW_FOR_GOAL` (R20) |
 
 ### 6.3 Critères d’acceptation globaux (rappel QA)
 
@@ -301,4 +419,5 @@ EngineValid colle les seuils **1:1** sur ces constantes.
 | Zones | E/M/T/I/R | méthode `daniels_vdot_tables` → sec/km |
 | R01 Δ volume | vs semaine précédente | vs dernière semaine de charge (ADR-005) |
 | Template 10k int 4× | — | tampon conceptuel 2026-09-26 (S8 deload 74.3 %, pic 36.6) |
-
+| Volume de départ | median(recent) borné | `min(median, max(2 dernières)) × 1,10`, jamais remonté ; refus sous seuils distance×niveau (2026-10-02, P0-1) |
+| Allures | valeur unique par zone | fourchettes asymétriques côté lent, arrondi 5 s (2026-10-02, P0-1) |
