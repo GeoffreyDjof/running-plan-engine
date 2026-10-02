@@ -9,6 +9,8 @@ ArchiPlan Plan.
 
 from __future__ import annotations
 
+import statistics
+from collections.abc import Sequence
 from datetime import date, datetime, timedelta
 from typing import Any
 
@@ -51,6 +53,7 @@ class AthleteInfo(BaseModel):
     model_config = ConfigDict(extra="allow")
     level: str = "intermediate"
     injury: InjuryInfo = Field(default_factory=InjuryInfo)
+    recent_weekly_km: list[float] = Field(default_factory=list)
 
 
 class GoalInfo(BaseModel):
@@ -269,6 +272,11 @@ def _injury_active(athlete: dict[str, Any]) -> bool:
     return False
 
 
+def _recent_weekly_km(athlete: dict[str, Any]) -> list[float]:
+    raw = athlete.get("recent_weekly_km") or []
+    return [float(x) for x in raw]
+
+
 def _session_from_raw(raw: Any) -> SessionView:
     data = _dump(raw)
     kind = data.get("kind", "easy")
@@ -348,6 +356,7 @@ def _coerce_plan(plan: Any) -> PlanView:
             athlete=AthleteInfo(
                 level=level,
                 injury=InjuryInfo(active=_injury_active(athlete_raw)),
+                recent_weekly_km=_recent_weekly_km(athlete_raw),
             ),
             goal=GoalInfo(distance=goal_distance, race_date=race_date),
             benchmark=bm,
@@ -384,6 +393,7 @@ def _coerce_plan(plan: Any) -> PlanView:
         athlete=AthleteInfo(
             level=str(level),
             injury=InjuryInfo(active=_injury_active(athlete_raw)),
+            recent_weekly_km=_recent_weekly_km(athlete_raw),
         ),
         goal=GoalInfo(
             distance=_distance_label(goal_raw.get("distance") or goal_raw.get("distance_km")),
@@ -983,6 +993,59 @@ def _check_peak_volume(plan: PlanView, errors: list[ValidationError]) -> None:
         )
 
 
+# Rounding tolerance for the week-1 start-volume cap (session km are 0.1-rounded).
+START_VOLUME_EPSILON_KM = 0.05
+
+
+def reference_weekly_km(recent_weekly_km: Sequence[float]) -> float | None:
+    """ref_km = min(median of last 4 weeks, max of last 2 weeks); newest last.
+
+    DomainCoach P0-1 §3.8. Returns None when no recent volume is known.
+    """
+    recent = [float(x) for x in recent_weekly_km]
+    if not recent:
+        return None
+    last_n = recent[-C.START_REF_WEEKS :]
+    last_2 = recent[-C.START_REF_RECENT_WEEKS :]
+    return min(float(statistics.median(last_n)), max(last_2))
+
+
+def _check_start_volume(plan: PlanView, errors: list[ValidationError]) -> None:
+    """R21 START_VOLUME_ABOVE_RECENT: week 1 <= START_VOLUME_MAX_RATIO * ref_km.
+
+    ref_km comes from the athlete's real recent_weekly_km (P0-1 §3.8). Skipped
+    when recent_weekly_km is empty: that case is a planner refusal
+    (VOLUME_TOO_LOW_FOR_GOAL), not a plan-shape rule.
+    """
+    ref_km = reference_weekly_km(plan.athlete.recent_weekly_km)
+    if ref_km is None or not plan.weeks:
+        return
+    week1 = min(plan.weeks, key=lambda w: w.week_index)
+    week_km = round(_week_km(week1), 2)
+    max_km = round(C.START_VOLUME_MAX_RATIO * ref_km, 2)
+    if week_km <= max_km + START_VOLUME_EPSILON_KM:
+        return
+    ratio = round(week_km / ref_km, 4) if ref_km > 0 else None
+    errors.append(
+        _err(
+            _code(ErrorCode.VALIDATION_FAILED),
+            (
+                f"Semaine {week1.week_index} à {week_km:.1f} km : plus de "
+                f"{C.START_VOLUME_MAX_RATIO:.2f} × ton volume récent ({ref_km:.1f} km), "
+                f"max {max_km:.1f} km"
+            ).replace(".", ","),
+            rule_id="START_VOLUME_ABOVE_RECENT",
+            rule_ref="R21",
+            week_index=week1.week_index,
+            week_km=week_km,
+            ref_km=round(ref_km, 2),
+            max_km=max_km,
+            ratio=ratio,
+            max_ratio=C.START_VOLUME_MAX_RATIO,
+        )
+    )
+
+
 # ---------------------------------------------------------------------------
 # Public API
 # ---------------------------------------------------------------------------
@@ -1016,6 +1079,7 @@ def validate_plan(plan: Any) -> ValidationResult:
     _check_injury_quality(coerced, errors)
     _check_taper(coerced, errors)
     _check_peak_volume(coerced, errors)
+    _check_start_volume(coerced, errors)
 
     return ValidationResult(ok=len(errors) == 0, errors=errors)
 

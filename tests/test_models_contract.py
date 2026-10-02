@@ -10,6 +10,8 @@ import pytest
 from pydantic import ValidationError
 
 from plan_engine.models import (
+    EngineError,
+    ErrorCode,
     Options,
     PaceRange,
     PaceZoneDetail,
@@ -19,7 +21,6 @@ from plan_engine.models import (
     PlanWarning,
 )
 from plan_engine.planner import generate_plan
-from plan_engine.validator import validate_plan
 
 EXAMPLES = Path(__file__).resolve().parents[1] / "examples"
 _GENERATED_AT = dt.datetime(2026, 9, 26, 9, 0, 0, tzinfo=dt.UTC)
@@ -175,18 +176,12 @@ def test_generated_plan_examples_still_validate(name: str) -> None:
 
 
 def test_edge_injury_example_reaches_injury_path() -> None:
+    """Since P0-3 the validator gate runs inside generate_plan: the injury
+    example is refused with a typed INJURY_BLOCKS_QUALITY / R13 error."""
     raw = (EXAMPLES / "edge_injury_quality_blocked.json").read_text(encoding="utf-8")
     req = PlanRequest.model_validate_json(raw)
     assert req.goal.race_date == dt.date(2027, 1, 17)
-    plan = generate_plan(req)
-    assert isinstance(plan, Plan)
-    payload = plan.model_dump(mode="json")
-    payload["_request"] = json.loads(raw)
-    result = validate_plan(payload)
-    assert result.ok is False
-    codes = {e.code for e in result.errors}
-    rule_ids = {e.rule_id for e in result.errors} | {
-        (e.details or {}).get("rule_id") for e in result.errors
-    }
-    assert "INJURY_BLOCKS_QUALITY" in codes
-    assert "R13" in rule_ids
+    result = generate_plan(req)
+    assert isinstance(result, EngineError)
+    assert result.code == ErrorCode.INJURY_BLOCKS_QUALITY
+    assert "R13" in set(result.details.get("broken_rules", []))
