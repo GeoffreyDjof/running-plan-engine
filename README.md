@@ -50,6 +50,26 @@ Après `pip install -e .`, la commande `plan-engine` fait la même chose.
 
 Codes de sortie : `0` plan produit, `2` plan refusé (erreur typée, message en français), `1` entrée invalide.
 
+### Ordre de passage le soir de la démo
+
+PlanOrch tranche à 14h30, selon que les correctifs P0-11 (volume et sortie longue de demo_1) et P0-12 (jour affiché avant la course) sont mergés ou non.
+
+| Ordre | Quand | Passage |
+| --- | --- | --- |
+| **A** | P0-11 **et** P0-12 mergées | demo_1 → demo_2 → demo_3 → demo_4 |
+| **B** (repli) | sinon | demo_2 → demo_3 → demo_4, puis demo_1 en dernier ou sauté |
+
+Ordre B, prêt à copier :
+
+```bash
+python -m plan_engine.cli examples/demo/demo_2_intermediate_10k.json   # ouvre la démo : 10 km intermédiaire
+python -m plan_engine.cli examples/demo/demo_3_advanced_half.json      # semi confirmé
+python -m plan_engine.cli examples/demo/demo_4_undertrained_beginner_half.json  # refus en français, code 2
+# demo_1 seulement s'il reste du temps et que P0-11 est mergée
+```
+
+Pendant la démo, on lance uniquement ces 4 fichiers, sans saisir `--recent-km` en direct.
+
 ## Documentation
 
 - Architecture : [`docs/architecture.md`](docs/architecture.md)

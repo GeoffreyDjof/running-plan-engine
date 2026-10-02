@@ -12,3 +12,5 @@ Quatre `PlanRequest` pour la répétition QA. Les dates sont ancrées sur
 | 4 · débutant sous-entraîné, semi | [`demo_4_undertrained_beginner_half.json`](demo_4_undertrained_beginner_half.json) | Refus `VOLUME_TOO_LOW_FOR_GOAL` |
 
 Les 9 exemples `examples/*.json` restent inchangés (date de repli planner / conftest : 2026-09-26).
+
+Ordre de passage : A (demo_1 en premier) si P0-11 et P0-12 sont mergées, sinon B (ouverture sur demo_2, demo_1 en dernier ou sauté). Voir « Ordre de passage le soir de la démo » dans le [README](../../README.md).
