@@ -45,7 +45,8 @@ def test_edge_injury_example_documents_injury_constraint() -> None:
         (EXAMPLES / "edge_injury_quality_blocked.json").read_text(encoding="utf-8")
     )
     assert req.athlete.constraints.injuries
-    # Planner/validator later: INJURY_BLOCKS_QUALITY if intervals/reps scheduled.
+    assert req.goal.race_date is not None
+    # Date is far enough to skip GOAL_TOO_SOON so the injury path can be exercised.
 
 
 def test_error_code_is_exactly_six_handoff_codes() -> None:

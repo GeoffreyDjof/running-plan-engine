@@ -48,3 +48,14 @@
 - **Contexte** : Beg 10k : S8 deload ~75 % du pic du *bloc* (ex. 10.9/14.5) mais pas du pic absolu historique du plan (S1). Mesurer vs pic absolu fausse R04.
 - **Décision** : « Pic de charge récent » pour R04 = max des `target_km` / volumes des semaines `is_deload=false` **depuis la dernière deload** (bloc courant). Pas le max global du plan.
 - **Conséquences** : DomainCoach / EngineValid alignent R04 ; QA doit fournir le contexte `athlete` du `PlanRequest` à `validate_plan` (seuils level-dépendants) — dump nu sans athlete = hors contrat de revue.
+
+## ADR-007 — Contrat P0-2 : PaceRange, as_of_date, warnings structurés
+
+- **Date** : 2026-10-02
+- **Statut** : Accepted
+- **Contexte** : Le contrat P0 doit préparer trois évolutions sans casser les plans déjà générés : bandes d’allure autour du pace central, date de référence injectable (démo / déterminisme), et warnings machine-lisibles. `ErrorCode` reste limité aux 6 codes handoff (ADR-004). Le planner ne remplit pas encore les bandes (P0-6) ni `as_of_date` / `generated_at` dérivé (P0-7).
+- **Décision** :
+  - `PaceRange` (`min_sec_per_km`, `max_sec_per_km`, entiers > 0, `min < max` : min = extrémité rapide, max = extrémité lente) et `PaceZoneDetail.range: PaceRange | None = None`. `pace_sec_per_km` reste le pace central ; si `range` est présent, `min <= pace_sec_per_km <= max`. Largeurs DomainCoach (à appliquer par le planner en P0-6, hors de ce contrat) : autour du pace de zone, plus large côté lent, arrondi 5 s — E −3 % / +8 %, M −1 % / +3 %, T/I/R −1 % / +2 % (ex. E à VDOT 35 → 7:00–7:45/km).
+  - Date de référence injectable : `options.as_of_date: date | None = None` (pas au top-level `PlanRequest` : c’est une option de calcul, pas un attribut athlète/objectif). Même input + même `as_of_date` → JSON identique. Le plan peut l’echo dans `meta.as_of_date`. `meta.generated_at` est un horodatage **dérivé / déterministe**, pas l’horloge murale (câblage planner en P0-7).
+  - `meta.warnings` devient `list[PlanWarning]` (défaut `[]`) avec `code` (id anglais stable, ex. `START_VOLUME_CAPPED`), `message_fr`, `details: dict = {}`. Les warnings ne bloquent pas ; les refus restent `EngineError`.
+- **Conséquences** : plans générés actuels (sans `range`, `warnings: []`) restent valides. EngineMoteur câble les bandes (P0-6) et `as_of_date` / `generated_at` (P0-7). EngineValid n’a pas de nouveau `ErrorCode`. Les `list[str]` en warnings sont un breaking change volontaire et petit (aucun exemple commité n’avait de chaînes).
