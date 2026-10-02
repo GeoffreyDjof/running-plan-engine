@@ -1,25 +1,27 @@
 # Matrice QA métier — DRAFT
 
-> **Statut : draft — exécution phase 4 démarrée (ACC-01 VERT)**  
-> Date : 2026-09-26 (Europe/Paris)  
+> **Statut : draft — phase 4 relue le 2026-10-02 (9 HP distance×niveau verts hors marathon)**  
+> Date : 2026-10-02 (Europe/Paris) — prérequis / pytest / HP §2 mis à jour vs `main` @ 4139b77  
 > Source : `docs/handoff.md` (bootstrap phase 0–1) + profil QAPlan / Archi / DomainCoach / EngineValid  
 > Langue : rapports humains FR ; ids de cas / fixtures / codes d’erreur EN  
 > Distances v1 uniquement : `5k` | `10k` | `half` (semi) | `marathon` — pas de trail / ultra  
-> Rapport phase 4 : [`docs/qa-phase4-report-10k-int.md`](qa-phase4-report-10k-int.md)
+> Rapport phase 4 consolidé : [`docs/qa-phase4-report.md`](qa-phase4-report.md)  
+> Archive ACC-01 (2026-09-26) : [`docs/qa-phase4-report-10k-int.md`](qa-phase4-report-10k-int.md)
 
 ---
 
 ## 0. Prérequis d’exécution (bloquants)
 
-| Composant | Attendu | État box (2026-09-26 PM) |
-|-----------|---------|------------------------|
-| `src/plan_engine/paces.py` | VDOT + `pace_zones` (E/M/T/I/R) | **PRÉSENT** |
-| `src/plan_engine/validator.py` | Contraintes sécurité + codes typés | **PRÉSENT** |
-| `src/plan_engine/planner.py` | `generate_plan(PlanRequest) -> Plan` | **PRÉSENT** (template `intermediate_10k_4x` seul) |
-| Fixtures `tests/fixtures/` | `valid_plan.json`, `unsafe_*.json` | **PRÉSENT** (1 valid + 15 unsafe) |
-| pytest | Snapshot JSON stables + couverture métier | **38 passed** (phase 3 DoD) |
+| Composant | Attendu | État box (`main` @ 4139b77, 2026-10-02) |
+|-----------|---------|----------------------------------------|
+| `src/plan_engine/paces.py` | VDOT + `pace_zones` (E/M/T/I/R) | **PRÉSENT** (points uniques, pas `PaceRange`) |
+| `src/plan_engine/validator.py` | Contraintes sécurité + codes typés | **PRÉSENT** (15 `unsafe_*` ; pas de règle start-volume) |
+| `src/plan_engine/planner.py` | `generate_plan(PlanRequest) -> Plan` | **PRÉSENT** — 9 templates (5k/10k/half × beg 3× / int+adv 4×). Marathon **absent**. `validate_plan` **non** appelé en fin de `generate_plan`. |
+| Fixtures `tests/fixtures/` | `valid_plan.json`, `unsafe_*.json` | **PRÉSENT** (1 valid + 15 unsafe) ; `unsafe_start_volume_above_recent.json` **absent** |
+| pytest | Snapshot JSON stables + couverture métier | **48 passed** (`python3 -m pytest -q` sur 4139b77) |
+| CLI `scripts/generate_cli.py` | Démo lisible FR + JSON | **ABSENT** |
 
-**Règle livrable QAPlan** : après planner, passer chaque case rouge/vert. Phase 4 : **HP-10k-int-s4-inj0 / ACC-01 = VERT** ; reste de la grille encore bloqué (pas d’autres templates).
+**Règle livrable QAPlan** : après planner, passer chaque case rouge/vert. Phase 4 (2026-10-02) : **9 HP 5k/10k/half × niveau = VERT** ; **ACC-01 VERT** ; marathon / inj1 / s5–s6 encore bloqués. Détail + table P0 : `qa-phase4-report.md`.
 
 ---
 
@@ -59,27 +61,27 @@ Attendu commun happy path :
 
 | # | id | distance | level | sess/sem | injury | Semaines cibles | Attendu |
 |---|----|----------|-------|----------|--------|-----------------|---------|
-| 1 | HP-10k-int-s4-inj0 | 10k | intermediate | 4 | non | **11** (cible ~12) | **VERT** (2026-09-26) — ACC-01 ; fixture → 11 sem ; validate OK ; pace_zones only ; artifact stable — voir `qa-phase4-report-10k-int.md` |
-| 2 | HP-10k-int-s4-inj0-10w | 10k | intermediate | 4 | non | 10 | Variante durée template #1 (10–12 sem) |
-| 3 | HP-10k-beg-s3-inj0 | 10k | beginner | 3 | non | 12 | Bas volume, polarisé easy |
-| 4 | HP-10k-beg-s4-inj0 | 10k | beginner | 4 | non | 12 | Template ordre #2 |
-| 5 | HP-10k-adv-s5-inj0 | 10k | advanced | 5 | non | 12 | Volume dans plafond int/adv 10k |
-| 6 | HP-10k-adv-s6-inj0 | 10k | advanced | 6 | non | 10–12 | Haut volume encore ≤ plafond |
-| 7 | HP-5k-beg-s3-inj0 | 5k | beginner | 3 | non | 8–10 | Première distance courte |
-| 8 | HP-5k-int-s4-inj0 | 5k | intermediate | 4 | non | 8–10 | Ordre templates #3 |
-| 9 | HP-5k-adv-s5-inj0 | 5k | advanced | 5 | non | 8–10 | Qualité bornée (≤1 très-qualité) |
-| 10 | HP-half-beg-s3-inj0 | half | beginner | 3 | non | 12–14 | Conservateur |
-| 11 | HP-half-int-s4-inj0 | half | intermediate | 4 | non | 12–14 | Ordre templates #4 |
-| 12 | HP-half-adv-s5-inj0 | half | advanced | 5 | non | 12–16 | Taper 10–14 j |
-| 13 | HP-mar-beg-s3-inj0 | marathon | beginner | 3 | non | 16–20 | **§10** : bas volume → **finisher** (jamais pic 70 km sem4) |
-| 14 | HP-mar-beg-s4-inj0 | marathon | beginner | 4 | non | 16–20 | Finisher ; pic ≤ plafond beg 40–50 |
-| 15 | HP-mar-int-s4-inj0 | marathon | intermediate | 4 | non | 16–20 | Conservateur asso |
-| 16 | HP-mar-int-s5-inj0 | marathon | intermediate | 5 | non | 16–20 | Ordre templates #5 |
-| 17 | HP-mar-adv-s5-inj0 | marathon | advanced | 5 | non | 16–20 | Pic ≤ 70–110, progression bornée |
+| 1 | HP-10k-int-s4-inj0 | 10k | intermediate | 4 | non | **11** (cible ~12) | **VERT** (recontrôlé 2026-10-02) — ACC-01 ; 11 sem ; validate OK ; artifact stable — `qa-phase4-report.md` §3.1 |
+| 2 | HP-10k-int-s4-inj0-10w | 10k | intermediate | 4 | non | 10 | Bloqué : template figé à 11 sem |
+| 3 | HP-10k-beg-s3-inj0 | 10k | beginner | 3 | non | 11 (cible 12) | **VERT** (2026-10-02) — `beginner_10k_3x` ; S4 deload 12.5 km |
+| 4 | HP-10k-beg-s4-inj0 | 10k | beginner | 4 | non | 12 | Bloqué : v1 beginner = 3 séances seulement |
+| 5 | HP-10k-adv-s5-inj0 | 10k | advanced | 5 | non | 12 | Bloqué en s5 ; **proche VERT en s4** — `advanced_10k_4x` 11 sem, pic ≤ 80, validate OK |
+| 6 | HP-10k-adv-s6-inj0 | 10k | advanced | 6 | non | 10–12 | Bloqué : pas de template 6× |
+| 7 | HP-5k-beg-s3-inj0 | 5k | beginner | 3 | non | 10 (cible 8–10) | **VERT** (2026-10-02) — `beginner_5k_3x` |
+| 8 | HP-5k-int-s4-inj0 | 5k | intermediate | 4 | non | 10 (cible 8–10) | **VERT** (2026-10-02) — `intermediate_5k_4x` |
+| 9 | HP-5k-adv-s5-inj0 | 5k | advanced | 5 | non | 8–10 | Bloqué en s5 ; **proche VERT en s4** — `advanced_5k_4x` 10 sem, pic ≤ 70 |
+| 10 | HP-half-beg-s3-inj0 | half | beginner | 3 | non | 12 (cible 12–14) | **VERT** (2026-10-02) — `beginner_half_3x` |
+| 11 | HP-half-int-s4-inj0 | half | intermediate | 4 | non | 12 (cible 12–14) | **VERT** (2026-10-02) — `intermediate_half_4x` ; taper 10–14 j |
+| 12 | HP-half-adv-s5-inj0 | half | advanced | 5 | non | 12–16 | Bloqué en s5 ; **proche VERT en s4** — `advanced_half_4x` 12 sem, pic ≤ 90 |
+| 13 | HP-mar-beg-s3-inj0 | marathon | beginner | 3 | non | 16–20 | **ROUGE / non générable** — `generate_plan` → `VALIDATION_FAILED` « Marathon en phase suivante » ; ACC-02 non vérifiable comme plan |
+| 14 | HP-mar-beg-s4-inj0 | marathon | beginner | 4 | non | 16–20 | **ROUGE / non générable** — même motif #13 (pas de template marathon) |
+| 15 | HP-mar-int-s4-inj0 | marathon | intermediate | 4 | non | 16–20 | **ROUGE / non générable** — pas de template marathon |
+| 16 | HP-mar-int-s5-inj0 | marathon | intermediate | 5 | non | 16–20 | **ROUGE / non générable** — pas de template marathon |
+| 17 | HP-mar-adv-s5-inj0 | marathon | advanced | 5 | non | 16–20 | **ROUGE / non générable** — pas de template marathon |
 | 18 | HP-10k-int-s4-inj1 | 10k | intermediate | 4 | **oui** | 12 | Happy path blessé : pas intervals/reps ; warning ; easy time-based |
 | 19 | HP-5k-beg-s3-inj1 | 5k | beginner | 3 | **oui** | 8–10 | Plan sûr sans qualité dure |
 | 20 | HP-half-int-s4-inj1 | half | intermediate | 4 | **oui** | 12–14 | Long plafonné + recovery |
-| 21 | HP-mar-beg-s3-inj1 | marathon | beginner | 3 | **oui** | 16–20 | Finisher encore plus conservateur |
+| 21 | HP-mar-beg-s3-inj1 | marathon | beginner | 3 | **oui** | 16–20 | **ROUGE / non générable** — marathon + injury non implémentés |
 | 22 | HP-10k-int-s5-inj0 | 10k | intermediate | 5 | non | 12 | Dispo compatible 5 séances |
 | 23 | HP-5k-int-s3-inj0 | 5k | intermediate | 3 | non | 8–10 | Bas volume intermediate OK |
 | 24 | HP-half-beg-s4-inj0 | half | beginner | 4 | non | 12–14 | Beg + 4 séances semi |
@@ -136,8 +138,8 @@ Codes attendus (anglais) ; **message utilisateur en français clair** (jamais d�
 
 | ID | Critère | Case(s) |
 |----|---------|---------|
-| ACC-01 | Plan **10k intermediate 4 séances / ~12 semaines** généré + validé | HP-10k-int-s4-inj0 — **VERT** (11 sem sur fixture actuelle) |
-| ACC-02 | **Beginner bas volume marathon** → plan **finisher** **ou** erreur claire ; **jamais 70 km en semaine 4** | HP-mar-beg-s3-inj0, HP-mar-beg-s4-inj0, E5 |
+| ACC-01 | Plan **10k intermediate 4 séances / ~12 semaines** généré + validé | HP-10k-int-s4-inj0 — **VERT** (11 sem, recontrôlé 2026-10-02) |
+| ACC-02 | **Beginner bas volume marathon** → plan **finisher** **ou** erreur claire ; **jamais 70 km en semaine 4** | **Non vérifiable comme plan** (2026-10-02) : pas de template marathon ; `VALIDATION_FAILED` « Marathon en phase suivante » ; garde-fou validateur seul = `unsafe_peak_volume` (R15) |
 | ACC-03 | Allures **seulement** via `pace_zones` | Assertions transverses + E18 |
 | ACC-04 | Erreurs impossibles / refus métier en **français clair** | Tous ERR-* |
 | ACC-05 | 100 % happy paths générés passent le validateur | §2 après planner |
@@ -167,8 +169,8 @@ Quand l’exécution sera débloquée :
 
 ## 6. Prochaines actions
 
-1. ~~paces + validator + planner intermediate_10k_4x~~ **fait** (phase 1–3).  
-2. QAPlan : **ACC-01 VERT** — rapport `docs/qa-phase4-report-10k-int.md`.  
-3. EngineMoteur : autres templates (beg/adv, 5k/half/mar, inj) pour débloquer HP #2–24.  
-4. QAPlan : exécuter le reste de la matrice → promouvoir draft → `docs/qa-matrix.md` quand ≥3 HP verts.
+1. ~~paces + validator + planner 5k/10k/half × 3 niveaux~~ **fait** (phase 1–3, `main` @ 4139b77, **48 tests**).  
+2. QAPlan : **ACC-01 VERT** + **9/9 HP 5k/10k/half** — rapport consolidé `docs/qa-phase4-report.md` (archive 10k-int conservée).  
+3. EngineMoteur : marathon conservateur + s5/s6 + inj + P0-3…P0-8 pour débloquer HP #2, #4–6, #13–24.  
+4. QAPlan : P0-9 répétition démo ~15h00 ; promouvoir draft → `docs/qa-matrix.md` après go/no-go (déjà ≥3 HP verts).
 

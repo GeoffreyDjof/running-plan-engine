@@ -1,5 +1,7 @@
 # Rapport QA phase 4 — ACC-01 / HP-10k-int-s4-inj0
 
+> **Archive (2026-09-26).** Le décompte « 38 tests » et le blocage « template `intermediate_10k_4x` seul » sont **obsolètes**. Rapport consolidé à jour (48 tests sur `main` @ 4139b77, table P0) : [`qa-phase4-report.md`](qa-phase4-report.md). Ce fichier est conservé comme preuve ACC-01 du 26 sept.
+
 > Date : 2026-09-26 (Europe/Paris)  
 > Owner : QAPlan (exécuteur BOX ONLY)  
 > Input : `examples/intermediate_10k.json`  
