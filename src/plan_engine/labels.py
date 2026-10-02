@@ -1,4 +1,4 @@
-"""French display labels for goal distances and levels (messages, CLI)."""
+"""French display labels for goal distances, levels and session kinds (messages, CLI)."""
 
 from __future__ import annotations
 
@@ -24,6 +24,13 @@ CONFIDENCE_FR: dict[str, str] = {
     "medium": "moyenne",
     "low": "faible",
 }
+SESSION_KIND_FR: dict[str, str] = {
+    "tempo": "allure seuil",
+    "cruise_intervals": "fractionné au seuil",
+    "intervals": "fractionné VMA",
+    "reps": "répétitions rapides",
+    "race_pace": "allure course",
+}
 
 
 def goal_key_fr(key: str) -> str:
@@ -42,3 +49,7 @@ def km_fr(value: float, decimals: int | None = None) -> str:
 
 def confidence_fr(value: str) -> str:
     return CONFIDENCE_FR.get(value, value)
+
+
+def session_kind_fr(kind: str) -> str:
+    return SESSION_KIND_FR.get(kind, kind)

@@ -17,6 +17,7 @@ from typing import Any
 from pydantic import BaseModel, ConfigDict, Field
 
 from plan_engine import constants as C
+from plan_engine.labels import session_kind_fr
 
 # ---------------------------------------------------------------------------
 # Prefer ArchiPlan ErrorCode / EngineError
@@ -1011,8 +1012,10 @@ def _check_injury_quality(plan: PlanView, errors: list[ValidationError]) -> None
                 errors.append(
                     _err(
                         _code(ErrorCode.INJURY_BLOCKS_QUALITY),
-                        f"Injury active blocks quality kind '{s.kind}' "
-                        f"(week {w.week_index})",
+                        "Blessure en cours : pas de séance de qualité tant qu'elle "
+                        f"est active (semaine {w.week_index} : {session_kind_fr(s.kind)}). "
+                        "Reste en endurance facile et fais valider la reprise par un "
+                        "professionnel de santé.",
                         rule_id="R13",
                         week_index=w.week_index,
                         kind=s.kind,
