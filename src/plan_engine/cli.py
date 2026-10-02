@@ -2,7 +2,7 @@
 
 Usage::
 
-    python -m plan_engine.cli examples/beginner_10k.json --as-of 2026-09-26
+    python -m plan_engine.cli examples/beginner_10k.json --as-of AAAA-MM-JJ
     python -m plan_engine.cli examples/beginner_half.json --recent-km 11,10,12,11
     python -m plan_engine.cli examples/advanced_5k.json --json > plan.json
 
