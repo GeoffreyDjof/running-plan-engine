@@ -19,6 +19,7 @@ from plan_engine.models import (
     Benchmark,
     EngineError,
     ErrorCode,
+    PaceRange,
     PaceZoneDetail,
     PaceZones,
 )
@@ -137,10 +138,29 @@ def pace_zones_from_vdot(vdot: float) -> PaceZones:
         zones[key] = PaceZoneDetail(
             pace_sec_per_km=pace,
             label=C.ZONE_LABELS[key],
+            range=pace_range_for(key, pace),
         )
     result = PaceZones(**zones)
     _assert_zone_order(result)
     return result
+
+
+def _round_to_step(value: float, step: int) -> int:
+    """Nearest multiple of `step`, ties rounded up (deterministic)."""
+    return _round_half_up(value / step) * step
+
+
+def pace_range_for(zone: str, pace_sec_per_km: int) -> PaceRange:
+    """§3.9 band: nearest-5 s bounds, widened only to contain the center."""
+    fast_pct, slow_pct = C.PACE_RANGE_PCT[zone]
+    step = C.PACE_RANGE_ROUND_SEC
+    lo = _round_to_step(pace_sec_per_km * (1.0 - fast_pct), step)
+    hi = _round_to_step(pace_sec_per_km * (1.0 + slow_pct), step)
+    lo = min(lo, pace_sec_per_km)
+    hi = max(hi, pace_sec_per_km)
+    if lo >= hi:  # degenerate band: open it on the slow side only
+        hi = lo + step
+    return PaceRange(min_sec_per_km=lo, max_sec_per_km=hi)
 
 
 def _assert_zone_order(zones: PaceZones) -> None:
