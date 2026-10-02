@@ -103,17 +103,51 @@ def test_datetime_kwarg_is_coerced_to_date() -> None:
     """datetime is a date subclass; keep a calendar date for arithmetic + JSON."""
     req = _req("intermediate_10k")
     instant = dt.datetime(2026, 9, 20, 15, 30, tzinfo=dt.UTC)
-    assert planner.resolve_as_of_date(req, instant) == dt.date(2026, 9, 20)  # type: ignore[arg-type]
+    assert planner.resolve_as_of_date(req, instant) == dt.date(2026, 9, 20)
+
+
+def test_iso_string_as_of_is_parsed() -> None:
+    req = _req("intermediate_10k")
+    assert planner.resolve_as_of_date(req, "2026-09-26") == dt.date(2026, 9, 26)
+    plan = planner.generate_plan(req, as_of_date="2026-09-26")
+    assert isinstance(plan, Plan)
+    assert plan.meta.as_of_date == dt.date(2026, 9, 26)
+
+
+def test_invalid_as_of_does_not_fall_through_to_today(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(planner, "_system_today", lambda: dt.date(2026, 10, 2))
+    req = _req("intermediate_10k")
+    with pytest.raises(TypeError, match="as_of_date"):
+        planner.resolve_as_of_date(req, 123)  # type: ignore[arg-type]
+    with pytest.raises(ValueError, match="as_of_date"):
+        planner.resolve_as_of_date(req, "not-a-date")
+    assert planner.resolve_as_of_date(req) == dt.date(2026, 10, 2)
 
 
 def test_no_race_date_window_follows_as_of() -> None:
     data = json.loads((ROOT / "examples" / "beginner_half.json").read_text())
     data["goal"]["race_date"] = None
     req = PlanRequest.model_validate(data)
-    plan = planner.generate_plan(req, as_of_date=dt.date(2026, 10, 2))  # Friday
-    assert isinstance(plan, Plan), plan
-    assert plan.meta.start_date == dt.date(2026, 10, 5)  # next Monday
-    assert plan.meta.as_of_date == dt.date(2026, 10, 2)
+    friday = planner.generate_plan(req, as_of_date=dt.date(2026, 10, 2))
+    sunday = planner.generate_plan(req, as_of_date=dt.date(2026, 10, 4))
+    monday = planner.generate_plan(req, as_of_date=dt.date(2026, 10, 5))
+    assert isinstance(friday, Plan), friday
+    assert isinstance(sunday, Plan), sunday
+    assert isinstance(monday, Plan), monday
+    assert friday.meta.start_date == dt.date(2026, 10, 5)
+    assert sunday.meta.start_date == dt.date(2026, 10, 5)
+    assert monday.meta.start_date == dt.date(2026, 10, 5)
+    assert monday.meta.as_of_date == dt.date(2026, 10, 5)
+
+
+def test_pinned_conftest_today_fills_generated_at() -> None:
+    req = _req("intermediate_10k")
+    plan = planner.generate_plan(req)
+    assert isinstance(plan, Plan)
+    assert plan.meta.as_of_date == dt.date(2026, 9, 26)
+    assert plan.meta.generated_at == dt.datetime(2026, 9, 26, tzinfo=dt.UTC)
 
 
 _ISO_DATE = re.compile(r"\b20\d{2}-\d{2}-\d{2}\b")

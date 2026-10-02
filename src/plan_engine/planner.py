@@ -64,16 +64,33 @@ _TEMPLATES: tuple[ModuleType, ...] = (
 
 
 def _as_calendar_date(value: object) -> dt.date | None:
-    """Accept ``date``; strip time from ``datetime`` (a date subclass)."""
+    """Coerce a caller-supplied as_of value to a calendar date.
+
+    ``None`` means “not provided” (fall through). ISO ``YYYY-MM-DD`` strings
+    are accepted. Other types raise — never silently use wall-clock today.
+    """
+    if value is None:
+        return None
     if isinstance(value, dt.datetime):
         return value.date()
     if isinstance(value, dt.date):
         return value
-    return None
+    if isinstance(value, str):
+        try:
+            return dt.date.fromisoformat(value)
+        except ValueError as exc:
+            raise ValueError(
+                "as_of_date must be a date or ISO YYYY-MM-DD, "
+                f"got {value!r}"
+            ) from exc
+    raise TypeError(
+        "as_of_date must be a date or ISO YYYY-MM-DD, "
+        f"got {type(value).__name__}"
+    )
 
 
 def resolve_as_of_date(
-    request: PlanRequest, as_of_date: dt.date | None = None
+    request: PlanRequest, as_of_date: dt.date | str | None = None
 ) -> dt.date:
     """Reference date for "today" (P0-7). Never hard-coded.
 
@@ -95,7 +112,7 @@ def _system_today() -> dt.date:
 
 
 def generate_plan(
-    request: PlanRequest, *, as_of_date: dt.date | None = None
+    request: PlanRequest, *, as_of_date: dt.date | str | None = None
 ) -> PlanResult:
     """Assemble a deterministic Plan from PlanRequest (no LLM)."""
     as_of = resolve_as_of_date(request, as_of_date)
@@ -338,8 +355,8 @@ def _schedule_window(
     if request.goal.race_date is not None:
         race_date = request.goal.race_date
     else:
-        # No race: plan starts the Monday after as_of; "race" = last Sunday.
-        first_monday = as_of + dt.timedelta(days=(7 - as_of.weekday()) % 7 or 7)
+        # No race: plan starts the Monday on or after as_of; "race" = last Sunday.
+        first_monday = as_of + dt.timedelta(days=(7 - as_of.weekday()) % 7)
         race_date = first_monday + dt.timedelta(weeks=n_weeks, days=-1)
     race_wd = race_date.weekday()
     last_week_monday = race_date - dt.timedelta(days=race_wd)
