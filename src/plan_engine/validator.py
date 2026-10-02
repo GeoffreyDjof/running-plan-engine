@@ -1029,9 +1029,11 @@ def _check_start_volume(plan: PlanView, errors: list[ValidationError]) -> None:
     errors.append(
         _err(
             _code(ErrorCode.VALIDATION_FAILED),
-            f"Week {week1.week_index} volume {week_km:.1f} km > "
-            f"{C.START_VOLUME_MAX_RATIO:.2f} x ref_km {ref_km:.1f} "
-            f"(max {max_km:.1f} km) [R21]",
+            (
+                f"Semaine {week1.week_index} à {week_km:.1f} km : plus de "
+                f"{C.START_VOLUME_MAX_RATIO:.2f} × ton volume récent ({ref_km:.1f} km), "
+                f"max {max_km:.1f} km"
+            ).replace(".", ","),
             rule_id="START_VOLUME_ABOVE_RECENT",
             rule_ref="R21",
             week_index=week1.week_index,
