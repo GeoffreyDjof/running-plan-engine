@@ -96,6 +96,15 @@ class WeekView(BaseModel):
     sessions: list[SessionView] = Field(default_factory=list)
 
 
+class PaceZoneView(BaseModel):
+    """One pace zone: central pace + optional inclusive band (ADR-007)."""
+
+    model_config = ConfigDict(extra="allow")
+    pace_sec_per_km: float | None = None
+    range_min: float | None = None
+    range_max: float | None = None
+
+
 class PlanView(BaseModel):
     """Flat validation view — matches EngineValid fixtures."""
 
@@ -106,6 +115,7 @@ class PlanView(BaseModel):
     availability: AvailabilityInfo = Field(default_factory=AvailabilityInfo)
     weeks: list[WeekView] = Field(default_factory=list)
     warnings: list[Any] = Field(default_factory=list)
+    pace_zones: dict[str, PaceZoneView] = Field(default_factory=dict)
 
 
 # ---------------------------------------------------------------------------
@@ -258,6 +268,25 @@ def _normalize_availability(raw: Any) -> AvailabilityInfo:
     return AvailabilityInfo()
 
 
+def _normalize_pace_zones(raw: Any) -> dict[str, PaceZoneView]:
+    """{E: {pace_sec_per_km, range: {min_sec_per_km, max_sec_per_km} | None}, ...}."""
+    data = _dump(raw) if raw is not None else None
+    if not isinstance(data, dict):
+        return {}
+    zones: dict[str, PaceZoneView] = {}
+    for key, value in data.items():
+        zone = _dump(value)
+        if not isinstance(zone, dict):
+            continue
+        band = _dump(zone.get("range")) if zone.get("range") is not None else None
+        zones[str(key).upper()] = PaceZoneView(
+            pace_sec_per_km=zone.get("pace_sec_per_km"),
+            range_min=band.get("min_sec_per_km") if isinstance(band, dict) else None,
+            range_max=band.get("max_sec_per_km") if isinstance(band, dict) else None,
+        )
+    return zones
+
+
 def _injury_active(athlete: dict[str, Any]) -> bool:
     inj = athlete.get("injury")
     if isinstance(inj, dict) and "active" in inj:
@@ -363,6 +392,7 @@ def _coerce_plan(plan: Any) -> PlanView:
             availability=_normalize_availability(avail_src),
             weeks=weeks,
             warnings=list((_dump(data.get("meta")) or {}).get("warnings") or []),
+            pace_zones=_normalize_pace_zones(data.get("pace_zones")),
         )
 
     # Flat EngineValid fixture shape
@@ -403,6 +433,7 @@ def _coerce_plan(plan: Any) -> PlanView:
         availability=_normalize_availability(avail),
         weeks=[_week_from_raw(w) for w in weeks_raw],
         warnings=list(data.get("warnings") or []),
+        pace_zones=_normalize_pace_zones(data.get("pace_zones")),
     )
 
 
@@ -520,6 +551,87 @@ def _check_benchmark(plan: PlanView, errors: list[ValidationError]) -> None:
                 max_sec=hi,
             )
         )
+
+
+# Adjacent zones (faster, slower) whose bands must not overlap: R < I < T < M.
+PACE_RANGE_ADJACENT_PAIRS: tuple[tuple[str, str], ...] = (("R", "I"), ("I", "T"), ("T", "M"))
+
+
+def _mmss(sec: float) -> str:
+    total = round(sec)
+    return f"{total // 60}:{total % 60:02d}"
+
+
+def _check_pace_ranges(plan: PlanView, errors: list[ValidationError]) -> None:
+    """R22 PACE_RANGE_INVALID (ADR-007 / coaching-rules §3.9).
+
+    For every zone carrying a range: min < max and min <= centre <= max. For
+    adjacent zones R/I, I/T, T/M: faster.max <= slower.min (no overlap). A zone
+    without a range is skipped (backward compatible with pre-P0-6 plans).
+    """
+    zones = plan.pace_zones
+    valid_band: set[str] = set()
+    for key in sorted(zones):
+        z = zones[key]
+        lo, hi = z.range_min, z.range_max
+        if lo is None or hi is None:
+            continue
+        if lo >= hi:
+            errors.append(
+                _err(
+                    _code(ErrorCode.VALIDATION_FAILED),
+                    f"Zone {key} : allure min {_mmss(lo)} /km pas plus rapide que la "
+                    f"max {_mmss(hi)} /km (la borne min doit être < la borne max)",
+                    rule_id="R22",
+                    rule_name="PACE_RANGE_INVALID",
+                    check="MIN_NOT_BELOW_MAX",
+                    zone=key,
+                    min_sec_per_km=lo,
+                    max_sec_per_km=hi,
+                    pace_sec_per_km=z.pace_sec_per_km,
+                )
+            )
+            continue
+        valid_band.add(key)
+        c = z.pace_sec_per_km
+        if c is not None and not (lo <= c <= hi):
+            errors.append(
+                _err(
+                    _code(ErrorCode.VALIDATION_FAILED),
+                    f"Zone {key} : allure centrale {_mmss(c)} /km hors de la fourchette "
+                    f"{_mmss(lo)}–{_mmss(hi)} /km",
+                    rule_id="R22",
+                    rule_name="PACE_RANGE_INVALID",
+                    check="CENTER_OUTSIDE_RANGE",
+                    zone=key,
+                    min_sec_per_km=lo,
+                    max_sec_per_km=hi,
+                    pace_sec_per_km=c,
+                )
+            )
+    for fast, slow in PACE_RANGE_ADJACENT_PAIRS:
+        if fast not in valid_band or slow not in valid_band:
+            continue
+        f, sl = zones[fast], zones[slow]
+        f_lo, f_hi, s_lo, s_hi = f.range_min, f.range_max, sl.range_min, sl.range_max
+        if f_lo is None or f_hi is None or s_lo is None or s_hi is None:
+            continue
+        if f_hi > s_lo:
+            errors.append(
+                _err(
+                    _code(ErrorCode.VALIDATION_FAILED),
+                    f"Zones {fast}/{slow} : la fourchette {fast} "
+                    f"({_mmss(f_lo)}–{_mmss(f_hi)} /km) déborde sur la "
+                    f"zone {slow} plus lente ({_mmss(s_lo)}–{_mmss(s_hi)} /km)",
+                    rule_id="R22",
+                    rule_name="PACE_RANGE_INVALID",
+                    check="ADJACENT_ZONES_OVERLAP",
+                    zone=fast,
+                    slower_zone=slow,
+                    fast_max_sec_per_km=f_hi,
+                    slow_min_sec_per_km=s_lo,
+                )
+            )
 
 
 def _check_weekly_jumps(plan: PlanView, errors: list[ValidationError]) -> None:
@@ -1067,6 +1179,7 @@ def validate_plan(plan: Any) -> ValidationResult:
 
     errors: list[ValidationError] = []
     _check_benchmark(coerced, errors)
+    _check_pace_ranges(coerced, errors)
     _check_weekly_jumps(coerced, errors)
     _check_deload(coerced, errors)
     _check_easy_share(coerced, errors)
