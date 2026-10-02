@@ -11,7 +11,7 @@
       {"weekday": "tue", "max_minutes": 70},
       {"weekday": "thu", "max_minutes": 75},
       {"weekday": "sat", "max_minutes": 60},
-      {"weekday": "sun", "max_minutes": 130}
+      {"weekday": "sun", "max_minutes": 150}
     ],
     "constraints": {
       "injuries": [],

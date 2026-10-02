@@ -7,8 +7,8 @@ from pathlib import Path
 
 import pytest
 
-from plan_engine.models import PlanRequest
-from plan_engine.planner import _select_template
+from plan_engine.models import EngineError, ErrorCode, Plan, PlanRequest
+from plan_engine.planner import _select_template, generate_plan
 
 DEMO_DIR = Path(__file__).resolve().parents[1] / "examples" / "demo"
 AS_OF = dt.date(2026, 10, 2)
@@ -45,10 +45,7 @@ def test_demo_folder_has_four_json_inputs(demo_paths: list[Path]) -> None:
     assert "demo_1_beginner_5k.json" in names
     assert "demo_2_intermediate_10k.json" in names
     assert "demo_4_undertrained_beginner_half.json" in names
-    assert names & {
-        "demo_3_advanced_half.json",
-        "demo_3_intermediate_half.json",
-    }
+    assert "demo_3_advanced_half.json" in names
 
 
 @pytest.mark.parametrize("path", _demo_json_paths(), ids=lambda p: p.name)
@@ -66,3 +63,27 @@ def test_demo_race_date_is_sunday_and_covers_template_weeks(path: Path) -> None:
     assert req.options.as_of_date == AS_OF
     weeks = _weeks_for(req)
     assert (race - AS_OF).days >= weeks * 7 - 3
+
+
+def test_demo_generate_plan_outcomes_on_main() -> None:
+    """Outcomes on current main (validate gate + volume cap + as_of_date)."""
+    expected: dict[str, str] = {
+        "demo_1_beginner_5k.json": "plan",
+        "demo_2_intermediate_10k.json": "plan",
+        "demo_3_advanced_half.json": "plan",
+        "demo_4_undertrained_beginner_half.json": ErrorCode.VOLUME_TOO_LOW_FOR_GOAL.value,
+    }
+    paths = _demo_json_paths()
+    assert {p.name for p in paths} == set(expected)
+
+    for path in paths:
+        req = PlanRequest.model_validate_json(path.read_text(encoding="utf-8"))
+        result = generate_plan(req)
+        want = expected[path.name]
+        if want == "plan":
+            assert isinstance(result, Plan), (path.name, result)
+            assert result.meta.start_date == dt.date(2026, 10, 5)
+        else:
+            assert isinstance(result, EngineError), (path.name, result)
+            assert result.code.value == want
+            assert result.message_fr
