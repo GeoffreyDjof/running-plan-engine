@@ -64,3 +64,25 @@ def test_floor_refusal_message_is_french(monkeypatch: pytest.MonkeyPatch) -> Non
         "Volume de départ trop bas : 9,4 km/sem, il faut au moins 10 km/sem "
         "réguliers pour démarrer un plan."
     )
+
+
+def test_confidence_labels_are_french() -> None:
+    from typing import get_args
+
+    from plan_engine.labels import CONFIDENCE_FR, confidence_fr
+    from plan_engine.models import PacesConfidence
+
+    assert set(get_args(PacesConfidence)) == set(CONFIDENCE_FR)
+    assert confidence_fr("high") == "élevée"
+    assert confidence_fr("medium") == "moyenne"
+    assert confidence_fr("low") == "faible"
+
+
+def test_cli_shows_french_confidence(capsys: pytest.CaptureFixture[str]) -> None:
+    from plan_engine.cli import EXIT_OK, run
+
+    code = run([str(ROOT / "examples" / "beginner_10k.json"), "--as-of", AS_OF])
+    out = capsys.readouterr().out
+    assert code == EXIT_OK
+    assert "(confiance " in out
+    assert "high" not in out and "medium" not in out and "(confiance low)" not in out

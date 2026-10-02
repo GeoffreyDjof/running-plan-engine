@@ -21,7 +21,7 @@ from typing import Any
 
 from pydantic import ValidationError
 
-from plan_engine.labels import GOAL_KM_FR, LEVEL_FR
+from plan_engine.labels import GOAL_KM_FR, LEVEL_FR, confidence_fr
 from plan_engine.models import EngineError, Plan, PlanRequest
 from plan_engine.planner import generate_plan
 
@@ -112,7 +112,7 @@ def format_plan(req: PlanRequest, plan: Plan) -> str:
             f"Plan {_goal_fr(g.distance_km)} — niveau {level} — {m.weeks} semaines "
             f"(début {m.start_date.isoformat()})"
         ),
-        f"Km récents saisis : {recent}  ·  VDOT {m.vdot:.1f} (confiance {m.paces_confidence})",
+        f"Km récents saisis : {recent}  ·  VDOT {m.vdot:.1f} (confiance {confidence_fr(m.paces_confidence)})",
     ]
     if m.as_of_date is not None:
         lines.append(f"Date de référence : {m.as_of_date.isoformat()}")
