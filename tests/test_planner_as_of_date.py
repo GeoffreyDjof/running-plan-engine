@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import datetime as dt
 import json
+import re
 from pathlib import Path
 
 import pytest
@@ -58,11 +59,16 @@ def test_as_of_drives_goal_too_soon() -> None:
 
 
 def test_default_as_of_uses_system_today(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Fallback _system_today() still fills meta.as_of_date (never left None)."""
     monkeypatch.setattr(planner, "_system_today", lambda: dt.date(2026, 10, 2))
-    req = _req("intermediate_10k")
+    req = _req("beginner_half")
     assert req.options.as_of_date is None
     assert planner.resolve_as_of_date(req) == dt.date(2026, 10, 2)
     assert planner.resolve_as_of_date(req, dt.date(2026, 1, 1)) == dt.date(2026, 1, 1)
+    plan = planner.generate_plan(req)
+    assert isinstance(plan, Plan)
+    assert plan.meta.as_of_date == dt.date(2026, 10, 2)
+    assert plan.meta.generated_at == dt.datetime(2026, 10, 2, tzinfo=dt.UTC)
 
 
 def test_options_as_of_date_echoed_and_deterministic() -> None:
@@ -110,7 +116,25 @@ def test_no_race_date_window_follows_as_of() -> None:
     assert plan.meta.as_of_date == dt.date(2026, 10, 2)
 
 
-def test_no_hardcoded_dates_in_planner() -> None:
+_ISO_DATE = re.compile(r"\b20\d{2}-\d{2}-\d{2}\b")
+_DATE_LITERAL = re.compile(r"\b(?:dt\.)?(?:date|datetime)\(\s*20\d{2}\s*,")
+
+
+def test_as_of_date_is_read_from_typed_options_field() -> None:
     src = (ROOT / "src" / "plan_engine" / "planner.py").read_text()
-    assert "dt.date(2026" not in src
-    assert "dt.datetime(2026" not in src
+    assert "request.options.as_of_date" in src
+    assert "getattr(request.options" not in src
+
+
+
+def test_no_hardcoded_dates_in_plan_engine() -> None:
+    """No hard-coded 20xx-xx-xx or date(20xx, ...) anywhere under src/plan_engine/."""
+    root = ROOT / "src" / "plan_engine"
+    hits: list[str] = []
+    for path in sorted(root.rglob("*.py")):
+        text = path.read_text()
+        rel = path.relative_to(ROOT)
+        for i, line in enumerate(text.splitlines(), start=1):
+            if _ISO_DATE.search(line) or _DATE_LITERAL.search(line):
+                hits.append(f"{rel}:{i}:{line.strip()}")
+    assert hits == []
