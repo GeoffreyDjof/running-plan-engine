@@ -1,34 +1,83 @@
 {
   "meta": {
     "engine_version": "0.1.0",
-    "generated_at": "2026-09-26T09:00:00Z",
+    "generated_at": "2026-09-26T00:00:00Z",
     "method": "vdot_templates_v1:advanced_10k_4x_v1",
     "vdot": 57.67,
     "paces_confidence": "high",
     "start_date": "2026-09-28",
     "weeks": 11,
-    "warnings": []
+    "as_of_date": "2026-09-26",
+    "warnings": [
+      {
+        "code": "VOLUME_CAPPED_BY_AVAILABILITY",
+        "message_fr": "Les minutes disponibles plafonnent le volume en S3, S5, S6, S7, S9 : 50,3 à 55,0 km/sem au lieu de 57,0 à 69,5 km prévus.",
+        "details": {
+          "weeks": [
+            3,
+            5,
+            6,
+            7,
+            9
+          ],
+          "actual_km": [
+            50.3,
+            53.0,
+            52.0,
+            55.0,
+            53.3
+          ],
+          "target_km": [
+            57.0,
+            59.8,
+            64.0,
+            66.8,
+            69.5
+          ]
+        }
+      }
+    ]
   },
   "pace_zones": {
     "E": {
       "pace_sec_per_km": 290,
-      "label": "Easy"
+      "label": "Easy",
+      "range": {
+        "min_sec_per_km": 280,
+        "max_sec_per_km": 315
+      }
     },
     "M": {
       "pace_sec_per_km": 241,
-      "label": "Marathon"
+      "label": "Marathon",
+      "range": {
+        "min_sec_per_km": 240,
+        "max_sec_per_km": 250
+      }
     },
     "T": {
       "pace_sec_per_km": 227,
-      "label": "Threshold"
+      "label": "Threshold",
+      "range": {
+        "min_sec_per_km": 225,
+        "max_sec_per_km": 230
+      }
     },
     "I": {
       "pace_sec_per_km": 208,
-      "label": "Interval"
+      "label": "Interval",
+      "range": {
+        "min_sec_per_km": 205,
+        "max_sec_per_km": 210
+      }
     },
     "R": {
       "pace_sec_per_km": 194,
-      "label": "Repetition"
+      "label": "Repetition",
+      "range": {
+        "min_sec_per_km": 190,
+        "max_sec_per_km": 200
+      }
     }
   },
   "plan": [
@@ -53,8 +102,8 @@
             },
             {
               "block": "main",
-              "duration_min": 51.7,
-              "distance_km": 10.7,
+              "duration_min": 55.1,
+              "distance_km": 11.4,
               "zone": "E"
             },
             {
@@ -64,8 +113,8 @@
               "zone": "E"
             }
           ],
-          "total_km": 10.7,
-          "total_minutes_est": 66.7,
+          "total_km": 11.4,
+          "total_minutes_est": 70.1,
           "load": null,
           "notes_fr": "Allure confortable, conversation possible."
         },
@@ -84,8 +133,8 @@
             },
             {
               "block": "main",
-              "duration_min": 51.7,
-              "distance_km": 10.7,
+              "duration_min": 55.1,
+              "distance_km": 11.4,
               "zone": "E"
             },
             {
@@ -95,8 +144,8 @@
               "zone": "E"
             }
           ],
-          "total_km": 10.7,
-          "total_minutes_est": 66.7,
+          "total_km": 11.4,
+          "total_minutes_est": 70.1,
           "load": null,
           "notes_fr": "Allure confortable, conversation possible."
         },
@@ -185,8 +234,8 @@
             },
             {
               "block": "main",
-              "duration_min": 62.4,
-              "distance_km": 12.9,
+              "duration_min": 64.8,
+              "distance_km": 13.4,
               "zone": "E"
             },
             {
@@ -196,8 +245,8 @@
               "zone": "E"
             }
           ],
-          "total_km": 12.9,
-          "total_minutes_est": 77.3,
+          "total_km": 13.4,
+          "total_minutes_est": 79.8,
           "load": null,
           "notes_fr": "Allure confortable, conversation possible."
         },
@@ -643,8 +692,8 @@
             },
             {
               "block": "main",
-              "duration_min": 97.6,
-              "distance_km": 20.2,
+              "duration_min": 97.2,
+              "distance_km": 20.1,
               "zone": "E"
             },
             {
@@ -654,8 +703,8 @@
               "zone": "E"
             }
           ],
-          "total_km": 20.2,
-          "total_minutes_est": 112.6,
+          "total_km": 20.1,
+          "total_minutes_est": 112.2,
           "load": null,
           "notes_fr": "Endurance fondamentale ; rester en zone E."
         },
@@ -775,8 +824,8 @@
             },
             {
               "block": "main",
-              "duration_min": 95.7,
-              "distance_km": 19.8,
+              "duration_min": 95.2,
+              "distance_km": 19.7,
               "zone": "E"
             },
             {
@@ -786,8 +835,8 @@
               "zone": "E"
             }
           ],
-          "total_km": 19.8,
-          "total_minutes_est": 110.7,
+          "total_km": 19.7,
+          "total_minutes_est": 110.2,
           "load": null,
           "notes_fr": "Endurance fondamentale ; rester en zone E."
         },
@@ -977,8 +1026,8 @@
             },
             {
               "block": "main",
-              "duration_min": 46.4,
-              "distance_km": 9.6,
+              "duration_min": 46.9,
+              "distance_km": 9.7,
               "zone": "E"
             },
             {
@@ -988,8 +1037,8 @@
               "zone": "E"
             }
           ],
-          "total_km": 9.6,
-          "total_minutes_est": 61.4,
+          "total_km": 9.7,
+          "total_minutes_est": 61.9,
           "load": null,
           "notes_fr": "Très souple, jambes légères."
         },
@@ -1008,8 +1057,8 @@
             },
             {
               "block": "main",
-              "duration_min": 46.4,
-              "distance_km": 9.6,
+              "duration_min": 47.4,
+              "distance_km": 9.8,
               "zone": "E"
             },
             {
@@ -1019,8 +1068,8 @@
               "zone": "E"
             }
           ],
-          "total_km": 9.6,
-          "total_minutes_est": 61.4,
+          "total_km": 9.8,
+          "total_minutes_est": 62.4,
           "load": null,
           "notes_fr": "Allure confortable, conversation possible."
         },
@@ -1171,8 +1220,8 @@
             },
             {
               "block": "main",
-              "duration_min": 98.1,
-              "distance_km": 20.3,
+              "duration_min": 97.6,
+              "distance_km": 20.2,
               "zone": "E"
             },
             {
@@ -1182,8 +1231,8 @@
               "zone": "E"
             }
           ],
-          "total_km": 20.3,
-          "total_minutes_est": 113.1,
+          "total_km": 20.2,
+          "total_minutes_est": 112.6,
           "load": null,
           "notes_fr": "Endurance fondamentale ; rester en zone E."
         },
@@ -1328,8 +1377,8 @@
       "is_deload": false,
       "sessions": [
         {
-          "id": "w11-thu-easy",
-          "weekday": "thu",
+          "id": "w11-fri-easy",
+          "weekday": "fri",
           "date": "2026-12-11",
           "kind": "easy",
           "title": "Footing pré-course",

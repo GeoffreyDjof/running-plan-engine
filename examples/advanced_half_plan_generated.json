@@ -1,34 +1,80 @@
 {
   "meta": {
     "engine_version": "0.1.0",
-    "generated_at": "2026-09-26T09:00:00Z",
+    "generated_at": "2026-09-26T00:00:00Z",
     "method": "vdot_templates_v1:advanced_half_4x_v1",
     "vdot": 56.48,
     "paces_confidence": "high",
     "start_date": "2026-10-05",
     "weeks": 12,
-    "warnings": []
+    "as_of_date": "2026-09-26",
+    "warnings": [
+      {
+        "code": "VOLUME_CAPPED_BY_AVAILABILITY",
+        "message_fr": "Les minutes disponibles plafonnent le volume en S6, S7, S9, S10 : 55,0 à 60,0 km/sem au lieu de 64,5 à 75,0 km prévus.",
+        "details": {
+          "weeks": [
+            6,
+            7,
+            9,
+            10
+          ],
+          "actual_km": [
+            55.0,
+            58.2,
+            56.7,
+            60.0
+          ],
+          "target_km": [
+            64.5,
+            69.0,
+            72.0,
+            75.0
+          ]
+        }
+      }
+    ]
   },
   "pace_zones": {
     "E": {
       "pace_sec_per_km": 295,
-      "label": "Easy"
+      "label": "Easy",
+      "range": {
+        "min_sec_per_km": 285,
+        "max_sec_per_km": 320
+      }
     },
     "M": {
       "pace_sec_per_km": 245,
-      "label": "Marathon"
+      "label": "Marathon",
+      "range": {
+        "min_sec_per_km": 245,
+        "max_sec_per_km": 250
+      }
     },
     "T": {
       "pace_sec_per_km": 231,
-      "label": "Threshold"
+      "label": "Threshold",
+      "range": {
+        "min_sec_per_km": 230,
+        "max_sec_per_km": 235
+      }
     },
     "I": {
       "pace_sec_per_km": 212,
-      "label": "Interval"
+      "label": "Interval",
+      "range": {
+        "min_sec_per_km": 210,
+        "max_sec_per_km": 215
+      }
     },
     "R": {
       "pace_sec_per_km": 197,
-      "label": "Repetition"
+      "label": "Repetition",
+      "range": {
+        "min_sec_per_km": 195,
+        "max_sec_per_km": 200
+      }
     }
   },
   "plan": [
@@ -185,8 +231,8 @@
             },
             {
               "block": "main",
-              "duration_min": 61.5,
-              "distance_km": 12.5,
+              "duration_min": 64.9,
+              "distance_km": 13.2,
               "zone": "E"
             },
             {
@@ -196,8 +242,8 @@
               "zone": "E"
             }
           ],
-          "total_km": 12.5,
-          "total_minutes_est": 76.5,
+          "total_km": 13.2,
+          "total_minutes_est": 79.9,
           "load": null,
           "notes_fr": "Allure confortable, conversation possible."
         },
@@ -1171,8 +1217,8 @@
             },
             {
               "block": "main",
-              "duration_min": 106.2,
-              "distance_km": 21.6,
+              "duration_min": 105.7,
+              "distance_km": 21.5,
               "zone": "E"
             },
             {
@@ -1182,8 +1228,8 @@
               "zone": "E"
             }
           ],
-          "total_km": 21.6,
-          "total_minutes_est": 121.2,
+          "total_km": 21.5,
+          "total_minutes_est": 120.7,
           "load": null,
           "notes_fr": "Endurance fondamentale ; rester en zone E."
         },
@@ -1491,8 +1537,8 @@
       "is_deload": false,
       "sessions": [
         {
-          "id": "w12-thu-easy",
-          "weekday": "thu",
+          "id": "w12-fri-easy",
+          "weekday": "fri",
           "date": "2026-12-25",
           "kind": "easy",
           "title": "Footing pré-course",

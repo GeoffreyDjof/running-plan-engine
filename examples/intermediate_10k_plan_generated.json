@@ -1,34 +1,83 @@
 {
   "meta": {
     "engine_version": "0.1.0",
-    "generated_at": "2026-09-26T09:00:00Z",
+    "generated_at": "2026-09-26T00:00:00Z",
     "method": "vdot_templates_v1:intermediate_10k_4x_v1",
     "vdot": 43.29,
     "paces_confidence": "high",
     "start_date": "2026-09-28",
     "weeks": 11,
-    "warnings": []
+    "as_of_date": "2026-09-26",
+    "warnings": [
+      {
+        "code": "VOLUME_CAPPED_BY_AVAILABILITY",
+        "message_fr": "Les minutes disponibles plafonnent le volume en S3, S5, S6, S7, S9 : 32,8 à 36,6 km/sem au lieu de 38,2 à 46,6 km prévus.",
+        "details": {
+          "weeks": [
+            3,
+            5,
+            6,
+            7,
+            9
+          ],
+          "actual_km": [
+            32.8,
+            34.4,
+            34.8,
+            36.6,
+            35.8
+          ],
+          "target_km": [
+            38.2,
+            40.1,
+            42.8,
+            44.7,
+            46.6
+          ]
+        }
+      }
+    ]
   },
   "pace_zones": {
     "E": {
       "pace_sec_per_km": 365,
-      "label": "Easy"
+      "label": "Easy",
+      "range": {
+        "min_sec_per_km": 355,
+        "max_sec_per_km": 395
+      }
     },
     "M": {
       "pace_sec_per_km": 304,
-      "label": "Marathon"
+      "label": "Marathon",
+      "range": {
+        "min_sec_per_km": 300,
+        "max_sec_per_km": 315
+      }
     },
     "T": {
       "pace_sec_per_km": 287,
-      "label": "Threshold"
+      "label": "Threshold",
+      "range": {
+        "min_sec_per_km": 285,
+        "max_sec_per_km": 295
+      }
     },
     "I": {
       "pace_sec_per_km": 263,
-      "label": "Interval"
+      "label": "Interval",
+      "range": {
+        "min_sec_per_km": 260,
+        "max_sec_per_km": 270
+      }
     },
     "R": {
       "pace_sec_per_km": 245,
-      "label": "Repetition"
+      "label": "Repetition",
+      "range": {
+        "min_sec_per_km": 245,
+        "max_sec_per_km": 250
+      }
     }
   },
   "plan": [
@@ -53,8 +102,8 @@
             },
             {
               "block": "main",
-              "duration_min": 46.2,
-              "distance_km": 7.6,
+              "duration_min": 49.3,
+              "distance_km": 8.1,
               "zone": "E"
             },
             {
@@ -64,8 +113,8 @@
               "zone": "E"
             }
           ],
-          "total_km": 7.6,
-          "total_minutes_est": 61.2,
+          "total_km": 8.1,
+          "total_minutes_est": 64.3,
           "load": null,
           "notes_fr": "Allure confortable, conversation possible."
         },
@@ -84,8 +133,8 @@
             },
             {
               "block": "main",
-              "duration_min": 46.2,
-              "distance_km": 7.6,
+              "duration_min": 49.3,
+              "distance_km": 8.1,
               "zone": "E"
             },
             {
@@ -95,8 +144,8 @@
               "zone": "E"
             }
           ],
-          "total_km": 7.6,
-          "total_minutes_est": 61.2,
+          "total_km": 8.1,
+          "total_minutes_est": 64.3,
           "load": null,
           "notes_fr": "Allure confortable, conversation possible."
         },
@@ -1171,8 +1220,8 @@
             },
             {
               "block": "main",
-              "duration_min": 80.9,
-              "distance_km": 13.3,
+              "duration_min": 80.3,
+              "distance_km": 13.2,
               "zone": "E"
             },
             {
@@ -1182,8 +1231,8 @@
               "zone": "E"
             }
           ],
-          "total_km": 13.3,
-          "total_minutes_est": 95.9,
+          "total_km": 13.2,
+          "total_minutes_est": 95.3,
           "load": null,
           "notes_fr": "Endurance fondamentale ; rester en zone E."
         },
@@ -1328,8 +1377,8 @@
       "is_deload": false,
       "sessions": [
         {
-          "id": "w11-thu-easy",
-          "weekday": "thu",
+          "id": "w11-fri-easy",
+          "weekday": "fri",
           "date": "2026-12-11",
           "kind": "easy",
           "title": "Footing pré-course",
