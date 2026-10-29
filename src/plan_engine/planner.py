@@ -816,10 +816,15 @@ def _rebalance_easy_volume(
         others = total() - km[lid]
         return new_long <= share * (others + new_long) + 1e-9
 
-    # 1) Long run >= longest footing: move 0.1 km steps from the longest footing.
+    # 1) Long run >= longest footing: move 0.1 km from the longest footing,
+    #    but stop before the long-share cap would break. Do not clip leftover
+    #    overflow here — a hard-capped short day would make that clip fail
+    #    the share check and cascade every session down to the short cap.
     for _ in range(400):
         top = max(foot_ids, key=lambda i: (km[i], i))
-        if km[top] <= km[lid] or km[lid] + 0.1 > caps[lid]:
+        if km[top] <= km[lid]:
+            break
+        if km[lid] + 0.1 > caps[lid] + 1e-9 or not long_ok(km[lid] + 0.1):
             break
         km[top] = round(km[top] - 0.1, 1)
         km[lid] = round(km[lid] + 0.1, 1)
@@ -841,14 +846,43 @@ def _rebalance_easy_volume(
             continue
         break
 
-    # 3) Safety wins: if the long share is still above the cap, shorten the
-    #    long run and clip footings to it (both bounds hold, volume drops).
+    # 3) Share too high: move km from the long run onto the shortest footing
+    #    that still has room (volume preserved). If no footing can take them,
+    #    shrink the long run only — never clip the other days in lockstep.
     for _ in range(400):
         if long_ok(km[lid]) or km[lid] <= 0.1:
             break
+        room = [
+            i
+            for i in foot_ids
+            if km[i] + 0.1 <= min(caps[i], km[lid] - 0.1) + 1e-9
+        ]
+        if room:
+            low = min(room, key=lambda i: (km[i], i))
+            km[lid] = round(km[lid] - 0.1, 1)
+            km[low] = round(km[low] + 0.1, 1)
+            continue
         km[lid] = round(km[lid] - 0.1, 1)
-        for i in foot_ids:
-            km[i] = min(km[i], km[lid])
+
+    # 4) Clip a footing still longer than the long run, one tenth at a time,
+    #    only while the long-share cap still holds after the loss. A short
+    #    hard-capped day makes further clipping raise the share, so we stop
+    #    and keep the km (long >= footing yields to share + volume).
+    for _ in range(400):
+        over = [i for i in foot_ids if km[i] > km[lid] + 1e-9]
+        if not over:
+            break
+        top = max(over, key=lambda i: (km[i], i))
+        new_total = total() - 0.1
+        if new_total <= 0 or km[lid] > share * new_total + 1e-9:
+            break
+        km[top] = round(km[top] - 0.1, 1)
+
+    # I4: a rebuilt session must stay at the 2 km coaching floor. Inflating
+    # a 1.7–1.9 km leftover by a few tenths beats emitting a miniature run.
+    for sid in (*foot_ids, lid):
+        if 0 < km[sid] < 2.0:
+            km[sid] = 2.0
 
     if all(abs(km[s.id] - (s.total_km or 0.0)) < 0.05 for s in sessions):
         return sessions
@@ -873,19 +907,31 @@ def _rebalance_easy_volume(
 
 
 def _split_easy(total: float, n: int) -> list[float]:
+    """Split ``total`` km into ``n`` parts that sum back to ``total``.
+
+    Each part is at least the coaching floor when ``total >= n * floor``.
+    When that is impossible the parts stay non-negative and even — never
+    dump the leftover on the last part after re-applying the floor
+    (``_split_easy(3, 3)`` used to return ``[2.0, 2.0, -1.0]``).
+    """
     if n <= 0:
         return []
-    base = round(total / n, 1)
-    parts = [base] * n
-    drift = round(total - sum(parts), 1)
-    parts[-1] = round(parts[-1] + drift, 1)
+    if total <= 0:
+        return [0.0] * n
     floor = 2.0 if total < 15 else (2.5 if total < 25 else 3.0)
-    # Do not inflate above requested total (availability clamp handles max)
-    parts = [max(p, floor) for p in parts]
-    if sum(parts) > total + 0.05 and total > 0:
-        scale = total / sum(parts)
-        parts = [max(round(p * scale, 1), floor) for p in parts]
-        parts[-1] = round(total - sum(parts[:-1]), 1)
+    tenth_total = round(total * 10)
+    floor_tenth = round(floor * 10)
+    if tenth_total >= n * floor_tenth:
+        extra = tenth_total - n * floor_tenth
+        q, r = divmod(extra, n)
+        parts_t = [floor_tenth + q + (1 if i >= n - r else 0) for i in range(n)]
+    else:
+        q, r = divmod(tenth_total, n)
+        parts_t = [q + (1 if i >= n - r else 0) for i in range(n)]
+    parts = [t / 10.0 for t in parts_t]
+    parts[-1] = round(total - sum(parts[:-1]), 1)
+    if parts[-1] < 0:
+        parts[-1] = 0.0
     return parts
 
 

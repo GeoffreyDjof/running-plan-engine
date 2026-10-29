@@ -84,17 +84,14 @@ I3_REPRO = _repro(
 )
 I5_REPRO = _repro("beginner", [16, 18, 17, 19], (("tue", 50), ("thu", 50), ("sun", 90)), 5.0, "2026-12-13")
 
-I1_REASON = (
-    "I1 ValidationError StructureBlock.duration_min<0. Repro beginner 5k "
-    "recent=[10,10,10,10] tue90/wed120/sat120 bench 5k@2500s as_of=2026-10-02 "
-    "race=2027-01-02 (_split_easy part negative, #17)."
-)
 I3_REASON = (
-    "I3 beginner semi recent=[40]*4 wed80/fri80/thu150 bench 1h30 "
-    "as_of=2026-10-02 race=2027-01-30. S1=23.6 then S2=19.6 (<0.9xS1), "
-    "collapse to 1.1 km in S6. Healthy on 38a4c14."
+    "I3 corpus: 24 plans (1 under 0.6×S1) vs 63/2 on 38a4c14 and 31/26 on "
+    "main after #17. Reproducer (beginner half, collapse to 1.1 km) is fixed."
 )
-I4_REASON = "I4 same request as I3. w6-wed-easy 1.1 km. Healthy on 38a4c14."
+I4_REASON = (
+    "I4 corpus: 6 plans (taper race_pace / minute-capped easy), same count "
+    "as 38a4c14; was 19 on main after #17. Reproducer w6-wed-easy 1.1 km is fixed."
+)
 I5_REASON = (
     "I5 beginner 5k tue/thu/sun race=2026-12-13. Preday Saturday undeclared."
 )
@@ -257,7 +254,6 @@ def _failing_plans(corpus, pred) -> list[str]:
     return [f"{req.athlete.id}: {msg}" for req, plan in _plans(corpus) if (msg := pred(req, plan))]
 
 
-@pytest.mark.xfail(strict=True, reason=I1_REASON)
 def test_i1_generate_plan_does_not_raise(corpus: Sequence[tuple[PlanRequest, Outcome]]) -> None:
     crashes = [
         (req.athlete.id, type(out).__name__, str(out).split("\n", 1)[0])
@@ -286,20 +282,17 @@ def test_i5_no_session_on_unavailable_day(corpus: Sequence[tuple[PlanRequest, Ou
     assert _failing_plans(corpus, check_i5) == []
 
 
-@pytest.mark.xfail(strict=True, reason=I1_REASON)
 def test_i1_reproducer() -> None:
     out = run_generate(PlanRequest.model_validate(I1_REPRO))
     assert not isinstance(out, BaseException), out
 
 
-@pytest.mark.xfail(strict=True, reason=I3_REASON)
 def test_i3_reproducer() -> None:
     req = PlanRequest.model_validate(I3_REPRO)
     out = generate_plan(req)
     assert isinstance(out, Plan) and check_i3(req, out) is None
 
 
-@pytest.mark.xfail(strict=True, reason=I4_REASON)
 def test_i4_reproducer() -> None:
     req = PlanRequest.model_validate(I3_REPRO)
     out = generate_plan(req)
