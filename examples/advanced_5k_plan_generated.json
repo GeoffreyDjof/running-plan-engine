@@ -916,8 +916,8 @@
             },
             {
               "block": "main",
-              "duration_min": 40.1,
-              "distance_km": 8.3,
+              "duration_min": 39.6,
+              "distance_km": 8.2,
               "zone": "E"
             },
             {
@@ -927,8 +927,8 @@
               "zone": "E"
             }
           ],
-          "total_km": 8.3,
-          "total_minutes_est": 55.1,
+          "total_km": 8.2,
+          "total_minutes_est": 54.6,
           "load": null,
           "notes_fr": "Allure confortable, conversation possible."
         },
@@ -972,14 +972,14 @@
           "structure": [
             {
               "block": "warmup",
-              "duration_min": 10.0,
+              "duration_min": 9.883333333333333,
               "distance_km": null,
               "zone": "E"
             },
             {
               "block": "main",
-              "duration_min": 39.6,
-              "distance_km": 8.2,
+              "duration_min": 40.1,
+              "distance_km": 8.3,
               "zone": "E"
             },
             {
@@ -989,8 +989,8 @@
               "zone": "E"
             }
           ],
-          "total_km": 8.2,
-          "total_minutes_est": 54.6,
+          "total_km": 8.3,
+          "total_minutes_est": 55.0,
           "load": null,
           "notes_fr": "Très souple, jambes légères."
         }
